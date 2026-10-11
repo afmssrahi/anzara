@@ -1,5 +1,2 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
-# Run lint-staged on changed files
+# Husky v9+: no shebang needed, just commands
 pnpm exec lint-staged
