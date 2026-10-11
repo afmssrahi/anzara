@@ -68,8 +68,11 @@ export function RegisterForm() {
         ...(form.phone ? { phone: form.phone } : {}),
       });
       setSession(data.accessToken, data.user);
-      success('Account created. Check your email to verify.');
-      router.push('/account');
+      // Trigger the verification email in the background. If it fails the user
+      // can still log in and use the resend control on the verify-email page.
+      void auth.requestOtp({ email: form.email, purpose: 'REGISTER' }).catch(() => undefined);
+      success('Account created. Check your email for the verification code.');
+      router.push(`/verify-email?email=${encodeURIComponent(form.email)}`);
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) showError(t.auth.emailTaken);

@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { ApiError } from '@anzara/api-client';
+import type { AdminUser } from '@anzara/shared-types';
 import { Button, FormField, Input, useToast } from '@anzara/ui';
 import { auth } from '../lib/api';
 import { useAdminAuthStore } from '../lib/auth-store';
@@ -9,85 +10,53 @@ import { useAdminAuthStore } from '../lib/auth-store';
 export function AdminLoginForm() {
   const { success, error: showError } = useToast();
   const setSession = useAdminAuthStore((s) => s.setSession);
-  const setChallenge = useAdminAuthStore((s) => s.setChallenge);
-  const storedChallenge = useAdminAuthStore((s) => s.challengeToken);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [code, setCode] = useState('');
-  const [stage, setStage] = useState<'credentials' | 'verify-2fa'>('credentials');
+  const [totpCode, setTotpCode] = useState('');
+  const [needsTotp, setNeedsTotp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; code?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; totp?: string }>({});
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsLoading(true);
     setErrors({});
     try {
-      if (stage === 'credentials') {
-        const data = await auth.adminLogin({ email, password });
-        if (data.requires2FA) {
-          if (data.challengeToken) setChallenge(data.challengeToken);
-          setStage('verify-2fa');
-          success('Enter your 2FA code');
-        } else if (data.admin && data.accessToken) {
-          setSession(data.accessToken, data.admin);
-          window.location.href = '/dashboard';
-        }
-      } else {
-        // 2FA verification
-        if (!storedChallenge) {
-          showError('Session expired, please sign in again.');
-          setStage('credentials');
-          return;
-        }
-        const data = await auth.verifyAdmin2FA({
-          email,
-          code,
-          challengeToken: storedChallenge,
-        });
-        setSession(data.accessToken, data.admin);
-        window.location.href = '/dashboard';
-      }
+      const body: { email: string; password: string; totpCode?: string } = { email, password };
+      if (needsTotp && totpCode) body.totpCode = totpCode;
+      const data = await auth.adminLogin(body);
+      setSession(data.accessToken, {
+        id: data.admin.id,
+        email: data.admin.email,
+        firstName: data.admin.firstName,
+        lastName: data.admin.lastName,
+        role: data.admin.role as AdminUser['role'],
+        permissions: data.admin.permissions,
+        isActive: true,
+        twoFactorEnabled: needsTotp,
+        createdAt: new Date().toISOString(),
+      });
+      success(`Welcome, ${data.admin.firstName}`);
+      window.location.href = '/dashboard';
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 401) showError('Invalid email or password');
-        else showError(err.message);
+        // Backend throws BadRequestError with code "TWO_FACTOR_REQUIRED" when
+        // the admin has 2FA enabled but no TOTP code was provided.
+        if (err.code === 'TWO_FACTOR_REQUIRED') {
+          setNeedsTotp(true);
+          success('Enter your 2FA code to continue');
+        } else if (err.status === 401) {
+          showError('Invalid email or password');
+        } else {
+          showError(err.message);
+        }
       } else {
         showError('Network error. Please try again.');
       }
     } finally {
       setIsLoading(false);
     }
-  }
-
-  if (stage === 'verify-2fa') {
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <FormField label="Verification code" htmlFor="code" required error={errors.code}>
-          <Input
-            id="code"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            hasError={Boolean(errors.code)}
-            placeholder="123456"
-          />
-        </FormField>
-        <Button type="submit" fullWidth isLoading={isLoading} size="lg">
-          Verify
-        </Button>
-        <button
-          type="button"
-          onClick={() => setStage('credentials')}
-          className="block w-full text-center text-xs text-gray-500 hover:underline"
-        >
-          ← Back to sign in
-        </button>
-      </form>
-    );
   }
 
   return (
@@ -114,8 +83,28 @@ export function AdminLoginForm() {
           hasError={Boolean(errors.password)}
         />
       </FormField>
+      {needsTotp && (
+        <FormField
+          label="2FA code"
+          htmlFor="totp"
+          required
+          error={errors.totp}
+          hint="Open your authenticator app"
+        >
+          <Input
+            id="totp"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={totpCode}
+            onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+            hasError={Boolean(errors.totp)}
+            placeholder="123456"
+          />
+        </FormField>
+      )}
       <Button type="submit" fullWidth isLoading={isLoading} size="lg">
-        Sign in
+        {needsTotp ? 'Verify' : 'Sign in'}
       </Button>
     </form>
   );

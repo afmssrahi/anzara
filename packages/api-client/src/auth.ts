@@ -14,40 +14,32 @@ import type {
   LoginRequest,
 } from '@anzara/shared-types';
 
+export type OtpPurpose = 'LOGIN' | 'REGISTER' | 'RESET_PASSWORD';
+
 export interface AuthClientConfig {
   api: ApiClient;
 }
 
-export interface CustomerRegisterData {
-  user: CustomerProfile;
-  accessToken: string;
-  expiresIn: number;
-}
-
-export interface CustomerLoginData {
-  user: CustomerProfile;
-  accessToken: string;
-  expiresIn: number;
-}
-
-export interface AdminLoginData {
-  /** True when 2FA challenge must be completed before tokens are issued. */
-  requires2FA: boolean;
-  /** Opaque challenge token to pass to `verifyAdmin2FA`. */
-  challengeToken?: string;
-  /** Set when 2FA is not required or already completed. */
-  admin?: AdminUser;
-  accessToken?: string;
-  expiresIn?: number;
-}
-
-export interface VerifyAdmin2FAData {
-  admin: AdminUser;
-  accessToken: string;
-  expiresIn: number;
-}
-
 export interface AuthTokens {
+  accessToken: string;
+  expiresIn: number;
+}
+
+export interface CustomerAuthData {
+  user: CustomerProfile;
+  accessToken: string;
+  expiresIn: number;
+}
+
+export interface AdminAuthData {
+  admin: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    permissions: string[];
+  };
   accessToken: string;
   expiresIn: number;
 }
@@ -61,52 +53,74 @@ export interface MessageData {
   message: string;
 }
 
+export interface AdminLoginInput {
+  email: string;
+  password: string;
+  totpCode?: string;
+}
+
 export function createAuthClient({ api }: AuthClientConfig) {
   return {
     // Customer endpoints ------------------------------------------------
     register(body: CustomerRegisterRequest) {
-      return api.request<CustomerRegisterData>('/api/auth/register', {
-        method: 'POST',
-        body,
-      });
-    },
-
-    verifyEmail(body: { email: string; otp: string }) {
-      return api.request<MessageData>('/api/auth/verify-email', {
-        method: 'POST',
-        body,
-      });
-    },
-
-    resendVerification(body: { email: string }) {
-      return api.request<MessageData>('/api/auth/resend-verification', {
+      return api.request<CustomerAuthData>('/api/auth/register', {
         method: 'POST',
         body,
       });
     },
 
     customerLogin(body: LoginRequest) {
-      return api.request<CustomerLoginData>('/api/auth/login', {
+      return api.request<CustomerAuthData>('/api/auth/login', {
         method: 'POST',
         body,
         withCredentials: true,
+      });
+    },
+
+    // OTP (email verification, passwordless login, etc.) -----------------
+    requestOtp(body: { email: string; purpose: OtpPurpose }) {
+      return api.request<MessageData>('/api/auth/otp/request', {
+        method: 'POST',
+        body,
+      });
+    },
+
+    verifyOtp(body: { email: string; code: string; purpose: OtpPurpose }) {
+      return api.request<MessageData>('/api/auth/otp/verify', {
+        method: 'POST',
+        body,
       });
     },
 
     // Admin endpoints ----------------------------------------------------
-    adminLogin(body: LoginRequest) {
-      return api.request<AdminLoginData>('/api/auth/admin/login', {
+    adminLogin(body: AdminLoginInput) {
+      return api.request<AdminAuthData>('/api/auth/admin/login', {
         method: 'POST',
         body,
         withCredentials: true,
       });
     },
 
-    verifyAdmin2FA(body: { email: string; code: string; challengeToken: string }) {
-      return api.request<VerifyAdmin2FAData>('/api/auth/admin/verify-2fa', {
+    // TOTP setup / enable / disable (admin only) -------------------------
+    setupTotp(token: string) {
+      return api.request<{ qrCode: string; secret: string }>('/api/auth/2fa/setup', {
+        method: 'POST',
+        token,
+      });
+    },
+
+    enableTotp(body: { code: string }, token: string) {
+      return api.request<MessageData>('/api/auth/2fa/enable', {
         method: 'POST',
         body,
-        withCredentials: true,
+        token,
+      });
+    },
+
+    disableTotp(token: string) {
+      return api.request<MessageData>('/api/auth/2fa/disable', {
+        method: 'POST',
+        token,
       });
     },
 
@@ -151,7 +165,19 @@ export function createAuthClient({ api }: AuthClientConfig) {
         token,
       });
     },
+
+    updateProfile(
+      body: { firstName?: string; lastName?: string; phone?: string | null },
+      token: string,
+    ) {
+      return api.request<CustomerProfile>('/api/auth/profile', {
+        method: 'PATCH',
+        body,
+        token,
+      });
+    },
   };
 }
 
 export type AuthClient = ReturnType<typeof createAuthClient>;
+export type { AdminUser, AuthUser, CustomerProfile, CustomerRegisterRequest, LoginRequest };

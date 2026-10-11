@@ -5,11 +5,11 @@ export { createAuthClient } from './auth';
 export type {
   AuthClient,
   AuthClientConfig,
+  AdminAuthData,
+  AdminLoginInput,
   AuthTokens,
-  AdminLoginData,
-  CustomerLoginData,
-  CustomerRegisterData,
+  CustomerAuthData,
   MeResponse,
   MessageData,
-  VerifyAdmin2FAData,
+  OtpPurpose,
 } from './auth';

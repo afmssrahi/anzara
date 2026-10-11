@@ -392,6 +392,17 @@ export const authService = {
     await authRepository.revokeAllUserRefreshTokens(userId);
   },
 
+  async changeAdminPassword(adminId: string, input: ChangePasswordInput): Promise<void> {
+    const { prisma } = await import('@anzara/database');
+    const admin = await prisma.adminUser.findUnique({ where: { id: adminId } });
+    if (!admin) throw new NotFoundError('Admin not found');
+    const valid = await verifyPassword(input.currentPassword, admin.passwordHash);
+    if (!valid) throw new UnauthorizedError('Current password is incorrect');
+    const passwordHash = await hashPassword(input.newPassword);
+    await prisma.adminUser.update({ where: { id: adminId }, data: { passwordHash } });
+    await authRepository.revokeAllAdminRefreshTokens(adminId);
+  },
+
   // ==================== Update profile ====================
   async updateProfile(userId: string, input: UpdateProfileInput) {
     const { prisma } = await import('@anzara/database');
@@ -409,6 +420,24 @@ export const authService = {
       },
     });
     return user;
+  },
+
+  async updateAdminProfile(
+    adminId: string,
+    input: { firstName?: string; lastName?: string; phone?: string | null },
+  ) {
+    const { prisma } = await import('@anzara/database');
+    const admin = await prisma.adminUser.update({
+      where: { id: adminId },
+      data: input,
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+    return admin;
   },
 
   // ==================== 2FA — Admin TOTP ====================

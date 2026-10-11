@@ -94,6 +94,13 @@ export const authRepository = {
     });
   },
 
+  revokeAllAdminRefreshTokens(adminId: string) {
+    return prisma.adminRefreshToken.updateMany({
+      where: { adminId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  },
+
   createOtp(data: { email: string; code: string; purpose: string; expiresAt: Date }) {
     return prisma.otpCode.create({ data });
   },

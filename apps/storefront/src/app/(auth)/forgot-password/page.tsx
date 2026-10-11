@@ -1,0 +1,21 @@
+import Link from 'next/link';
+import { ForgotPasswordForm } from './forgot-password-form';
+
+export default function ForgotPasswordPage() {
+  return (
+    <main className="mx-auto flex min-h-[calc(100vh-200px)] max-w-md flex-col justify-center px-4 py-12">
+      <div className="rounded-lg border bg-white p-6 shadow-sm sm:p-8">
+        <div className="mb-6 text-center">
+          <Link href="/" className="text-2xl font-bold text-brand-primary">
+            Anzara
+          </Link>
+          <h1 className="mt-4 text-2xl font-bold text-gray-900">Reset your password</h1>
+          <p className="mt-1 text-sm text-gray-600">
+            Enter your email and we&apos;ll send you a reset link.
+          </p>
+        </div>
+        <ForgotPasswordForm />
+      </div>
+    </main>
+  );
+}

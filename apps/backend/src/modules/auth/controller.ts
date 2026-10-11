@@ -7,6 +7,7 @@ import { authService } from './service';
 import { sendSuccess, sendCreated } from '../../lib/response';
 import { getEnv } from '@anzara/config';
 import { recordAudit } from '../../lib/audit';
+import { UnauthorizedError } from '../../lib/errors';
 import type { AuthedRequest } from '../../middleware/auth';
 import type {
   CustomerRegisterInput,
@@ -150,17 +151,31 @@ export const authController = {
   // ==================== Change password (logged in) ====================
   async changePassword(req: Request, res: Response): Promise<void> {
     const authReq = req as AuthedRequest;
-    if (!authReq.user) throw new Error('User not found');
-    await authService.changePassword(authReq.user.id, req.body as ChangePasswordInput);
+    const body = req.body as ChangePasswordInput;
+    if (authReq.user) {
+      await authService.changePassword(authReq.user.id, body);
+    } else if (authReq.admin) {
+      await authService.changeAdminPassword(authReq.admin.id, body);
+    } else {
+      throw new UnauthorizedError('Authentication required');
+    }
     sendSuccess(res, { message: 'Password changed' });
   },
 
   // ==================== Profile ====================
   async updateProfile(req: Request, res: Response): Promise<void> {
     const authReq = req as AuthedRequest;
-    if (!authReq.user) throw new Error('User not found');
-    const user = await authService.updateProfile(authReq.user.id, req.body as UpdateProfileInput);
-    sendSuccess(res, user);
+    const target = authReq.user ?? authReq.admin;
+    if (!target) throw new UnauthorizedError('Authentication required');
+    const result = authReq.user
+      ? { user: await authService.updateProfile(authReq.user.id, req.body as UpdateProfileInput) }
+      : {
+          admin: await authService.updateAdminProfile(
+            authReq.admin!.id,
+            req.body as UpdateProfileInput,
+          ),
+        };
+    sendSuccess(res, result);
   },
 
   // ==================== 2FA ====================

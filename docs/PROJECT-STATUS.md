@@ -9,7 +9,7 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 
 ## Current Phase
 
-**Phase 1 — Authentication UI** (in progress)
+**Phase 1 — Authentication UI** (substantially complete; last polish items below)
 
 ## Verified working
 
@@ -18,10 +18,17 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 - Prisma migration applied: 36 tables created
 - Seed completed: 1 SUPER_ADMIN, 21 permissions, 4 system roles, 6 default categories, 4 collections, 22 default settings
 - Backend starts on port 4000, `/health` returns 200
-- `POST /api/auth/register` returns JWT (verified end-to-end with real customer creation)
-- `POST /api/auth/admin/login` returns SUPER_ADMIN with all 21 permissions and JWT
-- Storefront builds with `/login` and `/register` routes
-- Admin app builds with real auth form wired to backend
+- `POST /api/auth/register` → 201 + JWT (verified end-to-end with real customer creation)
+- `POST /api/auth/login` → 200 + JWT
+- `GET /api/auth/me` → 200 (admin and customer)
+- `PATCH /api/auth/profile` → 200 (admin and customer)
+- `POST /api/auth/change-password` → 200 (admin and customer)
+- `POST /api/auth/forgot-password` → 200
+- `POST /api/auth/otp/request` → 200 (purpose: REGISTER / LOGIN / RESET_PASSWORD)
+- `POST /api/auth/logout` → 200
+- `POST /api/auth/admin/login` → 200 + admin with 21 permissions + JWT
+- Storefront builds with `/login`, `/register`, `/verify-email`, `/forgot-password`, `/reset-password`, `/account`
+- Admin app builds with real auth form + 2FA challenge step + `/dashboard` shell
 
 ## Login credentials
 
@@ -41,7 +48,7 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 ## Git
 
 - Branch: `main` at https://github.com/afmssrahi/anzara.git
-- 10 commits pushed
+- 11 commits pushed
 
 ## Phase Status
 
@@ -90,26 +97,28 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 - [x] i18n provider (EN + BN dictionaries, language switcher, cookie + localStorage persistence)
 - [x] Layout with providers (I18nProvider, ToastProvider)
 - [x] `/login` page (email + password, error handling, redirect to /account)
-- [x] `/register` page (full form, password match validation, redirect)
+- [x] `/register` page (full form, password match validation, sends verification OTP, redirects to `/verify-email`)
+- [x] `/verify-email` page (6-digit code input + 60s resend cooldown)
+- [x] `/forgot-password` page
+- [x] `/reset-password?token=...` page
+- [x] `/account` page (read + edit profile, change password, sign out)
 - [x] Build green
 
 **Admin UI (done):**
 
-- [x] Real login form wired to `POST /api/auth/admin/login`
-- [x] 2FA challenge step (when admin has 2FA enabled)
+- [x] Real login form wired to `POST /api/auth/admin/login` (with optional `totpCode`)
+- [x] 2FA challenge step (when admin has 2FA enabled; backend returns TWO_FACTOR_REQUIRED)
 - [x] Stores token + admin user, redirects to `/dashboard`
+- [x] `/dashboard` page with auth-gated `AdminShell` (sidebar + topbar)
+- [x] Permission-aware nav (`useAdminPermissions().has(...)` + SUPER_ADMIN bypass)
+- [x] Sign out from topbar
 - [x] Build green
 
-**Still TODO in Phase 1:**
+**Still TODO in Phase 1 (low priority):**
 
-- [ ] `/account` page (read profile, edit, change password)
-- [ ] `/forgot-password` + `/reset-password` storefront pages
-- [ ] Email verification flow page (`/verify-email`)
-- [ ] Admin dashboard skeleton (`/dashboard`) with auth-gated layout
-- [ ] Permission-aware sidebar (show/hide based on admin permissions)
-- [ ] Resend / Forgot password UI copy review
-- [ ] End-to-end manual test of every flow
+- [ ] End-to-end manual test of every flow in a real browser (basic curl tests done)
 - [ ] Audit log viewer in admin (post-MVP)
+- [ ] UI copy / BN translation review
 
 ### Phase 2 — Products (Day 8-14)
 
