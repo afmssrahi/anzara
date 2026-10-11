@@ -51,6 +51,26 @@ export const resetPasswordSchema = z.object({
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: passwordSchema,
+});
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+export const updateProfileSchema = z.object({
+  firstName: z.string().min(1).max(50).trim().optional(),
+  lastName: z.string().min(1).max(50).trim().optional(),
+  phone: phoneSchema.optional(),
+  preferredLocale: localeSchema.optional(),
+  acceptsMarketing: z.boolean().optional(),
+});
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+export const enableTotpSchema = z.object({
+  code: z.string().length(6),
+});
+export type EnableTotpInput = z.infer<typeof enableTotpSchema>;
+
 export const addressSchema = z.object({
   label: z.string().max(50).optional(),
   fullName: z.string().min(1).max(100).trim(),

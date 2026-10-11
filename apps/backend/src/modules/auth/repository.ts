@@ -137,4 +137,32 @@ export const authRepository = {
       data: { lastLoginAt: new Date() },
     });
   },
+
+  setUserPassword(userId: string, passwordHash: string) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+  },
+
+  setAdminTotpSecret(adminId: string, secret: string) {
+    return prisma.adminUser.update({
+      where: { id: adminId },
+      data: { twoFactorSecret: secret, twoFactorEnabled: false },
+    });
+  },
+
+  enableAdminTotp(adminId: string) {
+    return prisma.adminUser.update({
+      where: { id: adminId },
+      data: { twoFactorEnabled: true },
+    });
+  },
+
+  disableAdminTotp(adminId: string) {
+    return prisma.adminUser.update({
+      where: { id: adminId },
+      data: { twoFactorEnabled: false, twoFactorSecret: null },
+    });
+  },
 };

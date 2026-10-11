@@ -11,4 +11,7 @@ export {
   otpVerifySchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  changePasswordSchema,
+  updateProfileSchema,
+  enableTotpSchema,
 } from '@anzara/validators';

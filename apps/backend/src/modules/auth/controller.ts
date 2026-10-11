@@ -6,12 +6,19 @@ import type { Request, Response } from 'express';
 import { authService } from './service';
 import { sendSuccess, sendCreated } from '../../lib/response';
 import { getEnv } from '@anzara/config';
+import { recordAudit } from '../../lib/audit';
+import type { AuthedRequest } from '../../middleware/auth';
 import type {
   CustomerRegisterInput,
   CustomerLoginInput,
   AdminLoginInput,
   OtpRequestInput,
   OtpVerifyInput,
+  ForgotPasswordInput,
+  ResetPasswordInput,
+  ChangePasswordInput,
+  UpdateProfileInput,
+  EnableTotpInput,
 } from '@anzara/validators';
 
 const REFRESH_COOKIE = 'anzara_refresh';
@@ -110,5 +117,84 @@ export const authController = {
     }
     clearRefreshCookie(res);
     sendSuccess(res, { message: 'Logged out' });
+  },
+
+  // ==================== /me ====================
+  async me(req: Request, res: Response): Promise<void> {
+    const authReq = req as AuthedRequest;
+    if (authReq.admin) {
+      const admin = await authService.getCurrentAdmin(authReq.admin.id);
+      sendSuccess(res, { type: 'admin', user: admin });
+      return;
+    }
+    if (authReq.user) {
+      const user = await authService.getCurrentUser(authReq.user.id);
+      sendSuccess(res, { type: 'customer', user });
+    }
+  },
+
+  // ==================== Forgot / Reset password ====================
+  async forgotPassword(req: Request, res: Response): Promise<void> {
+    const { email } = req.body as ForgotPasswordInput;
+    await authService.requestPasswordReset(email);
+    // Always 200 to prevent email enumeration
+    sendSuccess(res, { message: 'If that email exists, a reset link has been sent.' });
+  },
+
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    const { token, newPassword } = req.body as ResetPasswordInput;
+    await authService.resetPassword(token, newPassword);
+    sendSuccess(res, { message: 'Password reset successful' });
+  },
+
+  // ==================== Change password (logged in) ====================
+  async changePassword(req: Request, res: Response): Promise<void> {
+    const authReq = req as AuthedRequest;
+    if (!authReq.user) throw new Error('User not found');
+    await authService.changePassword(authReq.user.id, req.body as ChangePasswordInput);
+    sendSuccess(res, { message: 'Password changed' });
+  },
+
+  // ==================== Profile ====================
+  async updateProfile(req: Request, res: Response): Promise<void> {
+    const authReq = req as AuthedRequest;
+    if (!authReq.user) throw new Error('User not found');
+    const user = await authService.updateProfile(authReq.user.id, req.body as UpdateProfileInput);
+    sendSuccess(res, user);
+  },
+
+  // ==================== 2FA ====================
+  async setupTotp(req: Request, res: Response): Promise<void> {
+    const authReq = req as AuthedRequest;
+    if (!authReq.admin) throw new Error('Admin not found');
+    const { qrCode, secret } = await authService.setupTotp(authReq.admin.id, authReq.admin.email);
+    sendSuccess(res, { qrCode, secret });
+  },
+
+  async enableTotp(req: Request, res: Response): Promise<void> {
+    const authReq = req as AuthedRequest;
+    if (!authReq.admin) throw new Error('Admin not found');
+    const { code } = req.body as EnableTotpInput;
+    await authService.enableTotp(authReq.admin.id, code);
+    await recordAudit({
+      adminId: authReq.admin.id,
+      action: 'admin.2fa.enable',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+    sendSuccess(res, { message: '2FA enabled' });
+  },
+
+  async disableTotp(req: Request, res: Response): Promise<void> {
+    const authReq = req as AuthedRequest;
+    if (!authReq.admin) throw new Error('Admin not found');
+    await authService.disableTotp(authReq.admin.id);
+    await recordAudit({
+      adminId: authReq.admin.id,
+      action: 'admin.2fa.disable',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+    sendSuccess(res, { message: '2FA disabled' });
   },
 };
