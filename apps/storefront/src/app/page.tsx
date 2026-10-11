@@ -9,20 +9,33 @@ export default function HomePage() {
             Anzara
           </Link>
           <nav className="hidden gap-6 md:flex">
-            <Link href="/products" className="text-sm font-medium hover:opacity-70">Shop</Link>
-            <Link href="/categories" className="text-sm font-medium hover:opacity-70">Categories</Link>
-            <Link href="/about" className="text-sm font-medium hover:opacity-70">About</Link>
+            <Link href="/products" className="text-sm font-medium hover:opacity-70">
+              Shop
+            </Link>
+            <Link href="/categories" className="text-sm font-medium hover:opacity-70">
+              Categories
+            </Link>
+            <Link href="/about" className="text-sm font-medium hover:opacity-70">
+              About
+            </Link>
           </nav>
           <div className="flex gap-4">
-            <Link href="/cart" className="text-sm font-medium">Cart</Link>
-            <Link href="/account" className="text-sm font-medium">Account</Link>
+            <Link href="/cart" className="text-sm font-medium">
+              Cart
+            </Link>
+            <Link href="/account" className="text-sm font-medium">
+              Account
+            </Link>
           </div>
         </div>
       </header>
 
       <section className="mx-auto max-w-7xl px-4 py-16 sm:py-24">
         <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl" style={{ color: 'var(--brand-primary)' }}>
+          <h1
+            className="text-4xl font-bold tracking-tight sm:text-6xl"
+            style={{ color: 'var(--brand-primary)' }}
+          >
             Timeless Elegance
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600">

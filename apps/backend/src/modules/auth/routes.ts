@@ -40,18 +40,8 @@ authRouter.post(
   asyncHandler(authController.requestOtp),
 );
 
-authRouter.post(
-  '/otp/verify',
-  validate(otpVerifySchema),
-  asyncHandler(authController.verifyOtp),
-);
+authRouter.post('/otp/verify', validate(otpVerifySchema), asyncHandler(authController.verifyOtp));
 
-authRouter.post(
-  '/refresh',
-  asyncHandler(authController.refresh),
-);
+authRouter.post('/refresh', asyncHandler(authController.refresh));
 
-authRouter.post(
-  '/logout',
-  asyncHandler(authController.logout),
-);
+authRouter.post('/logout', asyncHandler(authController.logout));

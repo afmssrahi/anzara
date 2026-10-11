@@ -206,7 +206,11 @@ async function main() {
     { key: 'social.instagram', value: '', group: 'social' },
     { key: 'social.whatsapp', value: '', group: 'social' },
     { key: 'seo.defaultTitle', value: 'Anzara - Premium Modest Fashion', group: 'seo' },
-    { key: 'seo.defaultDescription', value: 'Discover premium modest fashion at Anzara.', group: 'seo' },
+    {
+      key: 'seo.defaultDescription',
+      value: 'Discover premium modest fashion at Anzara.',
+      group: 'seo',
+    },
     { key: 'currency.code', value: 'BDT', group: 'general' },
     { key: 'currency.symbol', value: '৳', group: 'general' },
     { key: 'payment.cod.enabled', value: true, group: 'payment' },

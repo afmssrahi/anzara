@@ -46,6 +46,7 @@ pnpm dev
 ```
 
 Apps will be available at:
+
 - Storefront: http://localhost:3000
 - Admin: http://localhost:3001
 - Backend API: http://localhost:4000

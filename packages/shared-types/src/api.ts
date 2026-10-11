@@ -12,7 +12,10 @@ export interface LoginRequest {
   email: string;
   password: string;
 }
-export type LoginResponse = ApiResponse<{ user: AdminUser; tokens: { accessToken: string; refreshToken: string } }>;
+export type LoginResponse = ApiResponse<{
+  user: AdminUser;
+  tokens: { accessToken: string; refreshToken: string };
+}>;
 
 export interface CustomerRegisterRequest {
   email: string;
@@ -21,7 +24,10 @@ export interface CustomerRegisterRequest {
   lastName: string;
   phone?: string;
 }
-export type CustomerRegisterResponse = ApiResponse<{ user: CustomerProfile; tokens: { accessToken: string; refreshToken: string } }>;
+export type CustomerRegisterResponse = ApiResponse<{
+  user: CustomerProfile;
+  tokens: { accessToken: string; refreshToken: string };
+}>;
 
 export interface OtpRequest {
   email: string;

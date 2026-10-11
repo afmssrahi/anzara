@@ -9,7 +9,11 @@ import { getEnv } from '@anzara/config';
 import { authRepository } from './repository';
 import { emailService } from '../../lib/email';
 import { ConflictError, UnauthorizedError, BadRequestError } from '../../lib/errors';
-import type { CustomerRegisterInput, CustomerLoginInput, AdminLoginInput } from '@anzara/validators';
+import type {
+  CustomerRegisterInput,
+  CustomerLoginInput,
+  AdminLoginInput,
+} from '@anzara/validators';
 
 const BCRYPT_ROUNDS = 12;
 const OTP_EXPIRY_MINUTES = 10;
@@ -68,7 +72,9 @@ function signRefreshToken(payload: { sub: string; type: 'customer' | 'admin' }):
   } as SignOptions);
   // Decode to get expiry - simple parse since JWT format is known
   const decoded = jwt.decode(token) as { exp: number } | null;
-  const expiresAt = decoded ? new Date(decoded.exp * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const expiresAt = decoded
+    ? new Date(decoded.exp * 1000)
+    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   return { token, expiresAt };
 }
 
@@ -145,7 +151,14 @@ export const authService = {
 
   // ==================== Admin login ====================
   async loginAdmin(input: AdminLoginInput): Promise<{
-    admin: { id: string; email: string; firstName: string; lastName: string; role: string; permissions: string[] };
+    admin: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      role: string;
+      permissions: string[];
+    };
     tokens: AuthTokens;
   }> {
     const admin = await authRepository.findAdminByEmail(input.email);
@@ -188,7 +201,9 @@ export const authService = {
     const cooldownKey = `${email}:${purpose}`;
     const lastSent = otpCooldowns.get(cooldownKey);
     if (lastSent && Date.now() - lastSent < OTP_RESEND_COOLDOWN_SECONDS * 1000) {
-      throw new BadRequestError(`Please wait ${OTP_RESEND_COOLDOWN_SECONDS}s before requesting another code`);
+      throw new BadRequestError(
+        `Please wait ${OTP_RESEND_COOLDOWN_SECONDS}s before requesting another code`,
+      );
     }
     const code = generateOtpCode();
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
@@ -199,7 +214,11 @@ export const authService = {
   },
 
   // ==================== OTP verify ====================
-  async verifyOtp(email: string, code: string, purpose: 'LOGIN' | 'REGISTER' | 'RESET_PASSWORD'): Promise<void> {
+  async verifyOtp(
+    email: string,
+    code: string,
+    purpose: 'LOGIN' | 'REGISTER' | 'RESET_PASSWORD',
+  ): Promise<void> {
     const otp = await authRepository.findValidOtp(email, code, purpose);
     if (!otp) {
       throw new BadRequestError('Invalid or expired code');
@@ -256,7 +275,11 @@ export const authService = {
     return { accessToken, refreshToken, expiresIn: buildAccessExpiresIn() };
   },
 
-  async issueAdminTokens(adminId: string, email: string, permissions: string[]): Promise<AuthTokens> {
+  async issueAdminTokens(
+    adminId: string,
+    email: string,
+    permissions: string[],
+  ): Promise<AuthTokens> {
     const accessToken = signAccessToken({ sub: adminId, email, type: 'admin', permissions });
     const { token: refreshToken, expiresAt } = signRefreshToken({ sub: adminId, type: 'admin' });
     await authRepository.storeRefreshToken({

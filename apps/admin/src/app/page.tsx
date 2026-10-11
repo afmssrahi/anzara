@@ -36,7 +36,9 @@ export default function AdminLoginPage() {
           Auth wired up in Phase 1. Default credentials seeded in database.
         </p>
         <p className="text-center text-xs">
-          <Link href="/" className="text-gray-500 hover:text-gray-900">← Back to storefront</Link>
+          <Link href="/" className="text-gray-500 hover:text-gray-900">
+            ← Back to storefront
+          </Link>
         </p>
       </div>
     </main>

@@ -10,7 +10,7 @@ export function errorHandler(
   err: Error,
   req: Request,
   res: Response,
-   
+
   _next: NextFunction,
 ): void {
   // Zod validation errors -> 422 with field details

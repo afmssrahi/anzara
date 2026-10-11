@@ -56,7 +56,14 @@ export interface ShipmentRecord {
   id: string;
   provider: string;
   trackingNumber?: string;
-  status: 'PENDING' | 'PICKED_UP' | 'IN_TRANSIT' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'FAILED' | 'RETURNED';
+  status:
+    | 'PENDING'
+    | 'PICKED_UP'
+    | 'IN_TRANSIT'
+    | 'OUT_FOR_DELIVERY'
+    | 'DELIVERED'
+    | 'FAILED'
+    | 'RETURNED';
   shippedAt?: ISODateString;
   deliveredAt?: ISODateString;
   events: ShipmentEvent[];

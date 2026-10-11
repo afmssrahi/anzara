@@ -2,7 +2,12 @@
  * Product catalog validators.
  */
 import { z } from 'zod';
-import { slugSchema, localizedStringSchema, optionalLocalizedStringSchema, paginationSchema } from './common';
+import {
+  slugSchema,
+  localizedStringSchema,
+  optionalLocalizedStringSchema,
+  paginationSchema,
+} from './common';
 
 export const productVariantSchema = z.object({
   sku: z.string().min(1).max(50),

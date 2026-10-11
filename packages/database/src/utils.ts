@@ -4,7 +4,10 @@
 import { Prisma } from '@prisma/client';
 
 /** Build a unique order number, e.g. ANZ-2026-000123 */
-export function buildOrderNumber(sequence: number, year: number = new Date().getFullYear()): string {
+export function buildOrderNumber(
+  sequence: number,
+  year: number = new Date().getFullYear(),
+): string {
   const padded = sequence.toString().padStart(6, '0');
   return `ANZ-${year}-${padded}`;
 }

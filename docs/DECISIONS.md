@@ -13,6 +13,7 @@ A chronological record of significant decisions, with context and rationale.
 **Decision:** Use pnpm workspaces with Turborepo for build orchestration. Three apps (`storefront`, `admin`, `backend`) and five shared packages (`database`, `shared-types`, `ui`, `config`, `validators`).
 
 **Consequences:**
+
 - Single `pnpm install` for the whole monorepo
 - Shared types are type-safe across the stack
 - Each app can be deployed independently
@@ -29,6 +30,7 @@ A chronological record of significant decisions, with context and rationale.
 **Decision:** Keep Express.js backend as a separate service. Next.js frontends (`storefront`, `admin`) call the Express API over HTTP. No Next.js API routes for business logic (only for static BFF optimizations if needed later).
 
 **Consequences:**
+
 - Clear separation of concerns
 - Backend can be scaled independently of frontends
 - Two deploys, two processes, two sets of secrets
@@ -45,6 +47,7 @@ A chronological record of significant decisions, with context and rationale.
 **Decision:** No file may exceed 150 lines. If a file grows beyond this, it must be split. Enforced via code review and ESLint rules (warning at 150, error at 200).
 
 **Consequences:**
+
 - More files, but each has a single responsibility
 - Easier code review (small diffs)
 - Forces good decomposition
@@ -61,6 +64,7 @@ A chronological record of significant decisions, with context and rationale.
 **Decision:** Backend organized as `src/modules/<feature>/`. Each module has its own `routes.ts`, `controller.ts`, `service.ts`, `repository.ts`, `validators.ts`, `index.ts`. Modules communicate only through shared `database` and `shared-types` packages — never directly between modules.
 
 **Consequences:**
+
 - Feature isolation
 - Easy to extract a module into a microservice later
 - Clear ownership boundaries
@@ -77,6 +81,7 @@ A chronological record of significant decisions, with context and rationale.
 **Decision:** Theme tokens (primary, accent, neutral colors) stored in a `site_settings` table with a `theme` group. Admin dashboard has a "Theme" settings page that writes to this table. Frontend reads theme on every page load via a small server component that injects CSS variables.
 
 **Consequences:**
+
 - No code deploy for color changes
 - Cache theme with short TTL (60s) to avoid DB hammering
 - Frontend renders with a fallback theme while loading
@@ -92,6 +97,7 @@ A chronological record of significant decisions, with context and rationale.
 **Decision:** Build COD as a first-class payment method with its own workflow. SSLCommerz integration (cards, bKash, Nagad) is built in parallel but COD is fully functional from launch. COD orders have a special "Awaiting Confirmation" state that requires admin phone confirmation before fulfillment.
 
 **Consequences:**
+
 - Launch is not blocked by SSLCommerz approval
 - Admin has an extra step for COD orders (intentional - reduces fake orders)
 - Can add SSLCommerz without changing order flow
@@ -107,6 +113,7 @@ A chronological record of significant decisions, with context and rationale.
 **Decision:** Courier integration is a `CourierProvider` interface with a `ManualProvider` implementation as default. Admin can add real provider implementations later (Steadfast, Pathao, etc.) without changing order management code. Shipment tracking is stored generically (tracking number + status + history) regardless of provider.
 
 **Consequences:**
+
 - No blocking decision on courier
 - Can launch with manual tracking
 - Adding a real provider is a contained change
@@ -122,6 +129,7 @@ A chronological record of significant decisions, with context and rationale.
 **Decision:** All customer-facing content (product names, descriptions, UI strings) supports EN and BN. Stored as JSON columns or related `translations` tables. Default to BN if user locale is `bn`, else EN. User can toggle via header.
 
 **Consequences:**
+
 - Larger content entry burden (each product needs 2 names + 2 descriptions)
 - Higher conversion for BN-literate customers
 - Better SEO for Bengali search queries
@@ -137,6 +145,7 @@ A chronological record of significant decisions, with context and rationale.
 **Decision:** OTP via email (Resend). Order notifications via email + optional WhatsApp Business link. SMS can be added later as a pluggable provider without changing the notification module.
 
 **Consequences:**
+
 - Lower operating cost
 - Customers without email can still order (OTP can be replaced by admin-issued link)
 - WhatsApp Business API can be added when needed
@@ -148,19 +157,19 @@ A chronological record of significant decisions, with context and rationale.
 **Date:** 2026-10-11
 **Status:** Accepted
 
-| Layer | Choice | Reason |
-|---|---|---|
-| Frontend | Next.js 14 App Router + TypeScript | SSR/ISR, modern, great DX |
-| Styling | Tailwind CSS + shadcn/ui | Themeable, fast |
-| Backend | Express.js + TypeScript | Per SRS |
-| ORM | Prisma | Type-safe, migrations |
-| DB | PostgreSQL 15+ | Per SRS |
-| Validation | Zod | Shared FE/BE schemas |
-| Auth | JWT (access + refresh) in HttpOnly cookies | Stateless, scalable |
-| Email | Resend | Modern, simple |
-| Media | Cloudinary | Free tier, transformations |
-| Cache | Redis (Upstash) | Sessions, rate limit |
-| Search | Meilisearch | Fast, free tier (added Phase 2) |
-| Errors | Sentry | Free tier |
-| CI | GitHub Actions | Free |
-| Hosting | Vercel (FE) + Railway (BE+DB) | TBD before launch |
+| Layer      | Choice                                     | Reason                          |
+| ---------- | ------------------------------------------ | ------------------------------- |
+| Frontend   | Next.js 14 App Router + TypeScript         | SSR/ISR, modern, great DX       |
+| Styling    | Tailwind CSS + shadcn/ui                   | Themeable, fast                 |
+| Backend    | Express.js + TypeScript                    | Per SRS                         |
+| ORM        | Prisma                                     | Type-safe, migrations           |
+| DB         | PostgreSQL 15+                             | Per SRS                         |
+| Validation | Zod                                        | Shared FE/BE schemas            |
+| Auth       | JWT (access + refresh) in HttpOnly cookies | Stateless, scalable             |
+| Email      | Resend                                     | Modern, simple                  |
+| Media      | Cloudinary                                 | Free tier, transformations      |
+| Cache      | Redis (Upstash)                            | Sessions, rate limit            |
+| Search     | Meilisearch                                | Fast, free tier (added Phase 2) |
+| Errors     | Sentry                                     | Free tier                       |
+| CI         | GitHub Actions                             | Free                            |
+| Hosting    | Vercel (FE) + Railway (BE+DB)              | TBD before launch               |

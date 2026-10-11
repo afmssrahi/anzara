@@ -36,7 +36,14 @@ export interface AdminUser {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'ADMIN' | 'SUPER_ADMIN' | 'PRODUCT_MANAGER' | 'INVENTORY_MANAGER' | 'ORDER_MANAGER' | 'CUSTOMER_SUPPORT' | 'CONTENT_MANAGER';
+  role:
+    | 'ADMIN'
+    | 'SUPER_ADMIN'
+    | 'PRODUCT_MANAGER'
+    | 'INVENTORY_MANAGER'
+    | 'ORDER_MANAGER'
+    | 'CUSTOMER_SUPPORT'
+    | 'CONTENT_MANAGER';
   permissions: string[];
   isActive: boolean;
   twoFactorEnabled: boolean;
