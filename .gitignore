@@ -1,0 +1,74 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+*.lcov
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Production
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment files
+.env
+.env*.local
+.env.development
+.env.production
+.env.staging
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Prisma
+packages/database/prisma/migrations/dev.db*
+packages/database/prisma/*.db
+
+# OS
+.DS_Store
+
+# Vercel
+.vercel
+
+# Sentry
+.sentryclirc
+
+# Local docker
+.docker-data/
+
+# Turbo
+.turbo/
+
+# Local development scratch (test API calls, ad-hoc SQL, etc.)
+test-*.json
+test-*.ps1
+*.sql
+!packages/database/prisma/migrations/**/*.sql
+
+# Editor local state
+.puku/
+
+# Local development scratch (test API calls, ad-hoc SQL, etc.)
+test-*.json
+test-*.ps1
+*.sql
+!packages/database/prisma/migrations/**/*.sql
