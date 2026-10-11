@@ -52,7 +52,7 @@ packages/database/prisma/*.db
 # Vercel
 .vercel
 
-# Sentry
+# Sentry (kept for future; no code consumes it now)
 .sentryclirc
 
 # Local docker
@@ -60,6 +60,12 @@ packages/database/prisma/*.db
 
 # Turbo
 .turbo/
+
+# Local email outbox (default EmailProvider writes here in dev)
+emails-outbox/
+
+# Local asset uploads (default AssetProvider writes here in dev)
+uploads/
 
 # Local development scratch (test API calls, ad-hoc SQL, etc.)
 test-*.json
@@ -69,9 +75,3 @@ test-*.ps1
 
 # Editor local state
 .puku/
-
-# Local development scratch (test API calls, ad-hoc SQL, etc.)
-test-*.json
-test-*.ps1
-*.sql
-!packages/database/prisma/migrations/**/*.sql

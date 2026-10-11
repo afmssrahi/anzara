@@ -383,7 +383,7 @@ export const authService = {
     // Always return success to avoid email enumeration
     if (!user) return;
     const { token } = signResetToken(user.id);
-    await emailService.send({
+    await emailService.sendRaw({
       to: email,
       subject: 'Reset your Anzara password',
       html: `<p>Hi ${user.firstName},</p>
@@ -391,6 +391,7 @@ export const authService = {
         This link expires in ${RESET_TOKEN_EXPIRY_MINUTES} minutes.</p>
         <p><a href="${getEnv().APP_URL}/reset-password?token=${token}">Reset password</a></p>
         <p>If you didn't request this, ignore this email.</p>`,
+      tag: 'reset-password',
     });
   },
 

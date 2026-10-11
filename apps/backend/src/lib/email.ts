@@ -1,10 +1,18 @@
 /**
  * Email service.
- * Sends transactional email via Resend. Falls back to console logging in development
- * if no Resend key is configured, so the system works without third-party setup.
+ *
+ * Thin domain-specific wrapper around the active EmailProvider. The actual
+ * transport (file outbox / Resend / future SMTP) is decided by
+ * `modules/email/factory.ts` based on env. Callers here only know about
+ * `sendOtp`, `sendOrderEmail`, etc.
+ *
+ * In dev with no RESEND_API_KEY set, every email is written to
+ * `emails-outbox/<timestamp>__<tag>__<to>.json` and the OTP code is visible
+ * on disk - no third-party setup required.
  */
-import { getEnv } from '@anzara/config';
 import { logger } from './logger';
+import { getEmailProvider } from '../modules/email/factory';
+import type { EmailMessage } from '../modules/email/provider';
 
 interface OtpEmailParams {
   to: string;
@@ -16,6 +24,7 @@ interface OrderEmailParams {
   to: string;
   subject: string;
   html: string;
+  text?: string;
 }
 
 const PURPOSE_LABELS: Record<OtpEmailParams['purpose'], string> = {
@@ -38,37 +47,43 @@ function buildOtpHtml(code: string, purpose: string): string {
   `;
 }
 
+function buildOtpText(code: string, purpose: string): string {
+  const label = PURPOSE_LABELS[purpose as OtpEmailParams['purpose']] ?? 'verification';
+  return `Your Anzara ${label} code is: ${code}\n\nThis code expires in 10 minutes. If you didn't request it, please ignore this email.`;
+}
+
+async function send(message: EmailMessage): Promise<void> {
+  const provider = getEmailProvider();
+  try {
+    await provider.send(message);
+  } catch (err) {
+    // Don't throw - email failures shouldn't break user flows in this phase.
+    // A future "outbox + retry" job can pick failed sends up from the log.
+    logger.error(
+      { err, to: message.to, subject: message.subject, tag: message.tag },
+      'Failed to send email',
+    );
+  }
+}
+
 export const emailService = {
   async sendOtp(to: string, code: string, purpose: OtpEmailParams['purpose']): Promise<void> {
-    const html = buildOtpHtml(code, purpose);
-    await this.send({ to, subject: `Your Anzara ${PURPOSE_LABELS[purpose]} code`, html });
+    const label = PURPOSE_LABELS[purpose];
+    await send({
+      to,
+      subject: `Your Anzara ${label} code`,
+      html: buildOtpHtml(code, purpose),
+      text: buildOtpText(code, purpose),
+      tag: `otp-${purpose.toLowerCase()}`,
+    });
   },
 
   async sendOrderEmail(params: OrderEmailParams): Promise<void> {
-    await this.send(params);
+    await send({ ...params, tag: 'order' });
   },
 
-  async send(params: { to: string; subject: string; html: string }): Promise<void> {
-    const env = getEnv();
-    if (!env.RESEND_API_KEY) {
-      logger.info(
-        { to: params.to, subject: params.subject },
-        'Email (DEV mode - no Resend key, content not logged to avoid leaking OTPs)',
-      );
-      return;
-    }
-    try {
-      const { Resend } = await import('resend');
-      const resend = new Resend(env.RESEND_API_KEY);
-      await resend.emails.send({
-        from: env.EMAIL_FROM,
-        to: params.to,
-        subject: params.subject,
-        html: params.html,
-      });
-    } catch (err) {
-      logger.error({ err, to: params.to }, 'Failed to send email');
-      // Don't throw - email failures shouldn't break user flows in this phase
-    }
+  /** Generic send for future templates (newsletter, marketing, etc.). */
+  async sendRaw(message: EmailMessage): Promise<void> {
+    await send(message);
   },
 };

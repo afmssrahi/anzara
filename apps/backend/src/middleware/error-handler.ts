@@ -5,11 +5,14 @@
  *   in production; full error is still logged server-side.
  * - Redacts emails and token-like strings from server-side logs to avoid
  *   PII in error streams.
+ * - Hands the error to the active ErrorReporter (Pino by default). A future
+ *   Sentry adapter can plug in without changing this file.
  */
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { getEnv } from '@anzara/config';
 import { AppError, InternalError } from '../lib/errors';
+import { captureError } from '../modules/error-reporting/factory';
 
 const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const TOKEN_RE = /Bearer\s+[A-Za-z0-9._-]+/g;
@@ -32,6 +35,18 @@ function dumpContext(req: Request, err: Error): string {
 export function errorHandler(err: Error, req: Request, res: Response, _next: NextFunction): void {
   // Always log server-side (redacted).
   process.stderr.write(dumpContext(req, err));
+
+  // Hand off to the active ErrorReporter (Pino by default; Sentry later).
+  // Skip 4xx - they are client mistakes, not server faults - to keep the
+  // signal-to-noise ratio high.
+  const status = err instanceof AppError ? err.statusCode : 500;
+  if (status >= 500) {
+    captureError(err, {
+      requestId: (req as Request & { id?: string }).id,
+      request: `${req.method} ${req.path}`,
+      level: 'error',
+    });
+  }
 
   // Zod validation errors -> 422 with field details.
   if (err instanceof ZodError) {

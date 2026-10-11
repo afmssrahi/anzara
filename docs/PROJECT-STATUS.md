@@ -9,7 +9,7 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 
 ## Current Phase
 
-**Phase 2 — Products (with local asset upload)** ✅ Complete. Starting Phase 3 next.
+**Phase 2 — Products** ✅ Complete. Phase 3 (Cart + Checkout + COD) next.
 
 ## Verified working
 
@@ -165,9 +165,39 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 
 ## Blocked / Waiting On
 
-- **SSLCommerz merchant account** — Apply now at sslcommerz.com. Takes 1-7 days. Blocks Phase 3 payment integration.
-- **Resend API key** — Needed for email OTP delivery. Can use console transport in dev for now.
+- **SSLCommerz merchant account** — Apply now at sslcommerz.com. Takes 1-7 days. Blocks Phase 3 online payment integration. COD is the priority and works without this.
 - **Brand assets** — Logo, final color palette (using #0F4C5C as default teal, changeable from admin).
+
+## Service Architecture — Provider Contracts (all free, swappable)
+
+Every paid or SaaS dependency is hidden behind a tiny interface. The default
+implementation is free and in-process; swapping to a paid alternative is a
+one-file change (the factory). No call site, controller, UI, or schema needs
+to change.
+
+| Concern      | Free default (today)              | Optional adapter (later)          | Contract file                                          |
+| ------------ | --------------------------------- | --------------------------------- | ------------------------------------------------------ |
+| Email        | `FileEmailProvider` → local JSON  | `ResendEmailProvider` (HTTP)      | `apps/backend/src/modules/email/provider.ts`           |
+| Search       | `PostgresSearchProvider` (ILIKE)  | Meilisearch / Algolia / Typesense | `apps/backend/src/modules/search/provider.ts`          |
+| Asset upload | `LocalAssetProvider` → disk       | Cloudinary / S3 / R2              | `apps/backend/src/modules/assets/provider.ts`          |
+| Error track  | `PinoErrorReporter` → stdout JSON | Sentry / Bugsnag / Rollbar        | `apps/backend/src/modules/error-reporting/provider.ts` |
+| Payment      | COD                               | SSLCommerz (bKash/Nagad/Card)     | TBD in Phase 3 — same pattern                          |
+| Courier      | manual (CSV export)               | Pathao / Steadfast / RedX         | TBD in Phase 3 — same pattern                          |
+
+**Email today:** No third-party setup required. Every email is written to
+`./emails-outbox/<timestamp>__<tag>__<to>.json` (gitignored). OTP codes are
+visible on disk in dev. Set `RESEND_API_KEY=...` to flip to real email —
+zero code changes; the factory picks the right impl at startup.
+
+**Search today:** Postgres-native (slug + tags, case-insensitive). Zero
+extra process. Up to a few thousand SKUs, perfectly fine.
+
+**Errors today:** Structured JSON to stdout, ready for the host's log
+collector (CloudWatch, Loki, Datadog free tier, etc).
+
+**Why this matters:** We're not paying anyone a single taka to operate the
+app until it makes money. Adding Sentry or Meilisearch later is one
+factory line, not a refactor.
 
 ## Decisions Log
 

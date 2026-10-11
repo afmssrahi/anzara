@@ -18,8 +18,9 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   DATABASE_DIRECT_URL: z.string().url().optional(),
 
-  // Redis
-  REDIS_URL: z.string().url().default('redis://localhost:6379'),
+  // Redis: intentionally not in the schema yet. Nothing consumes it.
+  // When a session store or job queue needs it, re-introduce here with
+  // `z.string().url().or(z.literal('')).optional()` so empty string is allowed.
 
   // Auth
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
@@ -49,15 +50,20 @@ const envSchema = z.object({
     }),
 
   // Email
+  // RESEND_API_KEY is optional. With no key, emails are written to the local
+  // outbox (./emails-outbox/*.json) so flows work end-to-end with zero setup.
+  // Add a key later to switch the EmailProvider to Resend.
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default('Anzara <noreply@anzara.com>'),
+  EMAIL_OUTBOX_DIR: z.string().default('./emails-outbox'),
 
   // Media
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
 
-  // Local uploads (dev) — folder on disk + public URL prefix
+  // Local uploads (dev / fallback provider). Swap to Cloudinary by setting
+  // ASSET_PROVIDER=cloudinary and adding CLOUDINARY_* (no code change needed).
   UPLOAD_DIR: z.string().default('./uploads'),
   UPLOAD_MAX_BYTES: z.coerce
     .number()
@@ -78,21 +84,6 @@ const envSchema = z.object({
   COURIER_PROVIDER: z.string().default('manual'),
   COURIER_API_KEY: z.string().optional(),
   COURIER_API_SECRET: z.string().optional(),
-
-  // WhatsApp
-  WHATSAPP_BUSINESS_NUMBER: z.string().optional(),
-
-  // Search
-  MEILISEARCH_HOST: z.string().optional(),
-  MEILISEARCH_API_KEY: z.string().optional(),
-
-  // Errors
-  SENTRY_DSN: z.string().optional(),
-
-  // Analytics
-  NEXT_PUBLIC_GA4_MEASUREMENT_ID: z.string().optional(),
-  NEXT_PUBLIC_GTM_ID: z.string().optional(),
-  NEXT_PUBLIC_META_PIXEL_ID: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

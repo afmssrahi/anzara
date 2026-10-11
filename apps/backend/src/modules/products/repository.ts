@@ -4,6 +4,7 @@
  */
 import { prisma } from '@anzara/database';
 import type { Prisma } from '@prisma/client';
+import { getSearchProvider } from '../search/factory';
 
 export type ProductStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 
@@ -67,11 +68,14 @@ function buildWhere(filters: ListFilters): Prisma.ProductWhereInput {
   if (filters.collectionId) {
     where.collections = { some: { collectionId: filters.collectionId } };
   }
+
+  // Combine the free-text search fragment with the rest of the where via AND
+  // so we never blow away caller filters (category, inStock, etc.).
   if (filters.search && filters.search.trim().length > 0) {
-    const term = filters.search.trim();
-    // Simple search across slug + tags. JSONB name search lands in Phase 2.5
-    // with Meilisearch (per SRS) — no preview features here.
-    where.OR = [{ slug: { contains: term, mode: 'insensitive' } }, { tags: { has: term } }];
+    const hit = getSearchProvider().searchProducts(filters.search);
+    if (hit) {
+      return { AND: [where, hit.where] };
+    }
   }
   return where;
 }
