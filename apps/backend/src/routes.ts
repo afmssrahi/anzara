@@ -19,6 +19,7 @@ import { reviewsRouter, adminReviewsRouter } from './modules/reviews';
 import { wishlistRouter } from './modules/wishlist';
 import { publicContentRouter, adminContentRouter } from './modules/content';
 import { publicSettingsRouter } from './modules/settings';
+import { adminDashboardRouter } from './modules/dashboard';
 
 export const apiRouter: Router = Router();
 
@@ -59,3 +60,4 @@ apiRouter.use('/admin/settings', adminSettingsRouter);
 apiRouter.use('/admin/coupons', adminCouponsRouter);
 apiRouter.use('/admin/reviews', adminReviewsRouter);
 apiRouter.use('/admin/content', adminContentRouter);
+apiRouter.use('/admin/dashboard', adminDashboardRouter);

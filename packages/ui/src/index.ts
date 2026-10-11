@@ -17,3 +17,11 @@ export type { Locale, Dictionary } from './i18n/provider';
 export { LanguageSwitcher } from './i18n/language-switcher';
 export { cn } from './lib/cn';
 export { formatBDT, pickLocalized } from './format';
+export { organizationLd, webSiteLd, breadcrumbLd, productLd, jsonLdScript } from './seo';
+export type {
+  OrganizationInput,
+  WebSiteInput,
+  BreadcrumbItem,
+  ProductLdInput,
+  JsonLdObject,
+} from './seo';

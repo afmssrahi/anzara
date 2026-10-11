@@ -28,6 +28,7 @@ import { requestLogger } from './middleware/request-logger';
 import { errorHandler } from './middleware/error-handler';
 import { notFoundHandler } from './middleware/not-found';
 import { apiRouter } from './routes';
+import { seoRouter } from './modules/seo';
 
 export function createApp(): Express {
   const env = getEnv();
@@ -120,10 +121,14 @@ export function createApp(): Express {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // 9. API router.
+  // 9. SEO endpoints (sitemap.xml, robots.txt) — served at the API root
+  //    so search engines and crawlers can reach them directly.
+  app.use(seoRouter);
+
+  // 10. API router.
   app.use('/api', apiRouter);
 
-  // 10. 404 + error handler.
+  // 11. 404 + error handler.
   app.use(notFoundHandler);
   app.use(errorHandler);
 

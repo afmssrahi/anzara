@@ -78,3 +78,10 @@ export type {
 } from './content';
 export { createPublicSettingsClient } from './public-settings';
 export type { PublicSettingsClient, PublicSettings } from './public-settings';
+export { createDashboardClient } from './dashboard';
+export type {
+  DashboardClient,
+  DashboardSummary,
+  DashboardLowStockItem,
+  DashboardRecentOrder,
+} from './dashboard';

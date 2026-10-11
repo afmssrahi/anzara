@@ -7,6 +7,7 @@ import {
   createCouponsClient,
   createReviewsClient,
   createContentClient,
+  createDashboardClient,
 } from '@anzara/api-client';
 
 const baseUrl = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
@@ -19,3 +20,4 @@ export const settings = createSettingsClient({ api });
 export const coupons = createCouponsClient({ api });
 export const reviews = createReviewsClient({ api });
 export const content = createContentClient({ api });
+export const dashboard = createDashboardClient({ api });
