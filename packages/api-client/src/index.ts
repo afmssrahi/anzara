@@ -44,3 +44,13 @@ export { createSettingsClient } from './settings';
 export type { SettingsClient, SiteSetting, UpsertSettingBody } from './settings';
 export { createPaymentsClient } from './payments';
 export type { PaymentsClient, EnabledPaymentMethodsResponse } from './payments';
+export { createCouponsClient } from './coupons';
+export type {
+  CouponsClient,
+  AdminCoupon,
+  CouponPreview,
+  CreateCouponBody,
+  UpdateCouponBody,
+  CouponListResponse,
+  DiscountType,
+} from './coupons';

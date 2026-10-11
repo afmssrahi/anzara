@@ -1,6 +1,6 @@
 # Anzara - Project Status
 
-Last updated: 2026-10-12
+Last updated: 2026-10-13
 
 ## Overview
 
@@ -9,7 +9,7 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 
 ## Current Phase
 
-**Phase 3.5 — COD polished; settlement rails one file drop-in** ✅ COD end-to-end works. SSLCommerz / Pathao / Steadfast / RedX are blocked only on merchant credentials — see `docs/SETTLEMENTS.md` for the exact 4-step drop-in. Next: coupons, then Phase 4 (reviews + content + support).
+**Phase 3.5 — Coupons + settlement rails done; only real gateways remain** ✅ Customer can apply a coupon on the cart, the discount flows through to checkout atomically (CouponUsage row + usageCount increment inside the same transaction, auto-deactivate when the limit is hit), and admins have a full CRUD at `/dashboard/coupons`. SSLCommerz / Pathao / Steadfast / RedX remain a one-file drop-in (`docs/SETTLEMENTS.md`). Next: Phase 4 (reviews + content + support).
 
 ## Verified working
 
@@ -31,12 +31,13 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
   - Outbox: order confirmation email + 4 status-change emails per order (outbox `emails-outbox/*.json`)
   - Storefront pages: `/cart`, `/checkout`, `/orders`, `/orders/[id]` (with success banner via `?placed=1`)
   - Admin pages: `/dashboard/orders`, `/dashboard/orders/[id]`, `/dashboard/settings`
-- **Phase 3.5 (settlement rails):**
+- **Phase 3.5 (settlement rails + coupons):**
   - `PaymentProvider` contract + `CodPaymentProvider` (free, default) — orders service delegates onPlaced/onCancelled/onDelivered to it
   - `CourierProvider` contract + `ManualCourierProvider` (admin-entered tracking) — same shape, today is a no-op passthrough
   - `GET /api/payments/methods` — public endpoint driving the storefront's payment picker
   - Checkout UI now uses the dynamic list
   - Email templates extracted to `orders/email-templates.ts`
+  - **Coupons**: admin CRUD at `/dashboard/coupons`; customer apply/remove on `/cart`; atomic redeem at checkout (CouponUsage + usageCount in the same txn, auto-deactivate on limit hit)
 - All 9 packages: type-check / lint / format clean
 - All 3 apps: build green
 
@@ -193,9 +194,17 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 - [x] Email templates extracted to `orders/email-templates.ts`; the service is no longer 500 lines
 - [x] `scripts/smoke-payments.ps1` — public methods endpoint, unsupported method rejected, COD succeeds
 - [x] `scripts/smoke-cancel.ps1` — customer cancel flips payment to FAILED with reason
+- [x] **Coupons** (full slice):
+  - Backend `modules/coupons/` — admin CRUD + customer `POST /api/coupons/validate` (preview)
+  - Cart routes: `POST /api/cart/coupon` (apply) / `DELETE /api/cart/coupon` (remove); `get cart` re-validates the attached coupon each time and silently drops it if it no longer applies
+  - `orders.service.ts` redeems the coupon inside the checkout transaction (atomic `usageCount` increment + `CouponUsage` row); auto-deactivates when `usageCount` reaches `usageLimit`
+  - `computeCartTotals` reads tax from `SiteSetting("tax.percent")`; tax applies on the post-discount subtotal
+  - Storefront `/cart` page: promo code input, "applied coupon" pill with remove
+  - Admin: `/dashboard/coupons` list (paginated, searchable, activate/deactivate, delete) + `/dashboard/coupons/create` and `/dashboard/coupons/[id]` form
+  - Supports: percentage / fixed, min order, max discount cap, per-user + total usage limits, start/end dates, first-order-only, product / category restrictions
+  - `scripts/smoke-coupons.ps1` — full end-to-end (admin create → list → customer validate → apply → checkout with discount → usageCount++ + auto-deactivate → depleted rejected → 2nd order without coupon OK → deactivated rejected)
 - [ ] `SslCommerzPaymentProvider` (paid) — env keys already reserved; see `docs/SETTLEMENTS.md` for the exact 4-step drop-in
 - [ ] `PathaoCourierProvider` / `SteadfastCourierProvider` / `RedxCourierProvider` (paid) — see `docs/SETTLEMENTS.md`
-- [ ] Coupon CRUD (admin) + apply/remove on cart (customer) — schema already exists
 - [ ] `RETURN_REQUESTED → RETURNED → REFUNDED` transitions (state-machine stub already there)
 
 ### Phase 4 — Reviews, Support, Content (Day 22-28)
@@ -257,9 +266,8 @@ See [DECISIONS.md](DECISIONS.md) for full architectural decisions.
 
 ## Next Action
 
-Phase 3.5 partial: `PaymentProvider` + `CourierProvider` contracts are
-in place and COD is the only enabled payment method, end-to-end. When
-SSLCommerz / Pathao / Steadfast / RedX credentials land, follow
-`docs/SETTLEMENTS.md` for the exact 4-step drop-in. Next: coupon
-admin + apply/remove on cart. Then Phase 4 (reviews + content +
-support).
+Phase 3.5 done. Coupons + settlement rails (PaymentProvider / CourierProvider
+contracts) are in place; COD is the only enabled payment method, end-to-end.
+When SSLCommerz / Pathao / Steadfast / RedX credentials land, follow
+`docs/SETTLEMENTS.md` for the exact 4-step drop-in. Next: Phase 4
+(reviews + content + support).

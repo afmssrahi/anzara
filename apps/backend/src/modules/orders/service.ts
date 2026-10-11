@@ -26,6 +26,7 @@ import { toOrderDto } from './dto';
 import { computeCartTotals } from '../cart/totals';
 import { canTransition } from './state-machine';
 import { getPaymentProvider, type PaymentMethodContext } from '../payments';
+import { couponsService } from '../coupons';
 import { orderConfirmationEmail, orderStatusEmail } from './email-templates';
 import type {
   CreateOrderInput,
@@ -136,9 +137,38 @@ export const ordersService = {
           stockDecrement.push({ variantId: v.id, quantity: line.quantity });
         }
 
-        // 3. Compute totals.
+        // 3. Compute totals. If a coupon is attached to the cart, validate
+        //    it and redeem it (increment usageCount + record CouponUsage
+        //    inside this same transaction so a failure rolls everything
+        //    back). The redemption happens AFTER the order row exists
+        //    because the CouponUsage row needs the orderId.
         const subtotal = orderItems.reduce((s, it) => s + it.subtotal, 0);
-        const totals = await computeCartTotals({ subtotalPaisa: subtotal });
+
+        // Pass 1: compute totals without the coupon so we know the
+        // post-shipping total. The coupon discount is then applied on top
+        // of that (capped at subtotal in computeCartTotals).
+        const cartVariants = orderItems.map((it) => {
+          const v = byId.get(it.variantId);
+          return {
+            productId: it.productId as string,
+            categoryId: v?.product.categoryId ?? null,
+          };
+        });
+        let couponCode: string | null = null;
+        let discountPaisa = 0;
+        if (cart.couponCode) {
+          const preview = await couponsService.validateForUser({
+            code: cart.couponCode,
+            userId,
+            subtotalPaisa: subtotal,
+            cartVariants,
+          });
+          // We do NOT redeem yet (no orderId). We'll do it right after
+          // the order row is created, inside this same transaction.
+          couponCode = preview.code;
+          discountPaisa = preview.discountPaisa;
+        }
+        const totals = await computeCartTotals({ subtotalPaisa: subtotal, discountPaisa });
 
         // 3b. Provider gate-check (e.g. COD cap, gateway health).
         paymentProvider.validateMethod({ amountPaisa: totals.total });
@@ -205,13 +235,29 @@ export const ordersService = {
           shipping: totals.shipping,
           tax: totals.tax,
           total: totals.total,
-          couponCode: null,
+          couponCode,
           customerNote: input.customerNote ?? null,
           shippingAddressId: shippingAddress.id,
           billingAddressId,
           items: orderItems,
           payment: { method: input.paymentMethod, status: 'PENDING', amount: totals.total },
         });
+
+        // 6b. If a coupon was attached, atomically redeem it now. This
+        //     increments usageCount and inserts a CouponUsage row in the
+        //     SAME transaction. If the user has already used up the
+        //     perUserLimit or the usage limit was hit between the preview
+        //     and now, this throws and rolls back the order.
+        if (couponCode) {
+          await couponsService.txRedeem({
+            tx,
+            code: couponCode,
+            userId,
+            orderId: createdOrderId,
+            subtotalPaisa: subtotal,
+            cartVariants,
+          });
+        }
 
         // 7. Hand off to the payment provider. COD is a no-op. Gateways
         //    may open a session and update the Payment row with a

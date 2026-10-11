@@ -20,12 +20,12 @@ const NAV: NavItem[] = [
   { href: '/dashboard/products', label: 'Products', permission: 'product:view' },
   { href: '/dashboard/categories', label: 'Categories', permission: 'product:view' },
   { href: '/dashboard/orders', label: 'Orders', permission: 'order:view' },
-  { href: '/customers', label: 'Customers', permission: 'customer:view' },
-  { href: '/inventory', label: 'Inventory', permission: 'inventory:view' },
-  { href: '/coupons', label: 'Coupons', permission: 'coupon:view' },
-  { href: '/cms', label: 'Content', permission: 'cms:manage' },
+  { href: '/dashboard/customers', label: 'Customers', permission: 'customer:view' },
+  { href: '/dashboard/inventory', label: 'Inventory', permission: 'inventory:view' },
+  { href: '/dashboard/coupons', label: 'Coupons', permission: 'coupon:view' },
+  { href: '/dashboard/cms', label: 'Content', permission: 'cms:manage' },
   { href: '/dashboard/settings', label: 'Settings', permission: 'settings:view' },
-  { href: '/admin-users', label: 'Admins', permission: 'admin:user:manage' },
+  { href: '/dashboard/admin-users', label: 'Admins', permission: 'admin:user:manage' },
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {

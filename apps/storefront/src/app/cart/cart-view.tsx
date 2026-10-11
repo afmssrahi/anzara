@@ -17,6 +17,8 @@ export function CartView() {
   const [cartData, setCartData] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [couponInput, setCouponInput] = useState('');
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
   useEffect(() => {
     if (!accessToken) {
@@ -28,7 +30,10 @@ export function CartView() {
     cart
       .get(accessToken)
       .then((c) => {
-        if (!cancelled) setCartData(c);
+        if (!cancelled) {
+          setCartData(c);
+          if (c.appliedCouponCode) setCouponInput(c.appliedCouponCode);
+        }
       })
       .catch((err) => {
         if (!cancelled && err instanceof ApiError) showError(err.message);
@@ -70,6 +75,38 @@ export function CartView() {
     }
   }
 
+  async function applyCoupon() {
+    if (!accessToken) return;
+    const code = couponInput.trim();
+    if (!code) return;
+    setIsApplyingCoupon(true);
+    try {
+      const fresh = await cart.applyCoupon({ code }, accessToken);
+      setCartData(fresh);
+      success(`Coupon "${code.toUpperCase()}" applied`);
+    } catch (err) {
+      if (err instanceof ApiError) showError(err.message);
+      else showError('Could not apply coupon');
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  }
+
+  async function removeCoupon() {
+    if (!accessToken) return;
+    setIsApplyingCoupon(true);
+    try {
+      const fresh = await cart.removeCoupon(accessToken);
+      setCartData(fresh);
+      setCouponInput('');
+      success('Coupon removed');
+    } catch (err) {
+      if (err instanceof ApiError) showError(err.message);
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  }
+
   if (!accessToken || isLoading) {
     return <div className="mx-auto max-w-5xl px-4 py-12 text-gray-500">Loading…</div>;
   }
@@ -96,6 +133,9 @@ export function CartView() {
       </main>
     );
   }
+
+  const hasDiscount = cartData.discount.amount > 0;
+  const appliedCode = cartData.appliedCouponCode;
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
@@ -183,6 +223,7 @@ export function CartView() {
                 if (!accessToken) return;
                 const fresh = await cart.clear(accessToken);
                 setCartData(fresh);
+                setCouponInput('');
                 success('Cart cleared');
               }}
               className="text-gray-500 hover:underline"
@@ -199,7 +240,14 @@ export function CartView() {
           <h2 className="text-base font-semibold text-gray-900">Order summary</h2>
           <dl className="mt-4 space-y-2 text-sm">
             <Row label="Subtotal" amount={cartData.subtotal.amount} locale={locale} />
-            <Row label="Discount" amount={cartData.discount.amount} locale={locale} />
+            {hasDiscount && (
+              <Row
+                label={`Discount${appliedCode ? ` (${appliedCode})` : ''}`}
+                amount={-cartData.discount.amount}
+                locale={locale}
+                accent="green"
+              />
+            )}
             <Row label="Shipping" amount={cartData.shipping.amount} locale={locale} />
             <Row label="Tax" amount={cartData.tax.amount} locale={locale} />
             <div className="my-2 border-t" />
@@ -210,6 +258,49 @@ export function CartView() {
               </dd>
             </div>
           </dl>
+
+          {/* Coupon input */}
+          <div className="mt-5 border-t pt-5">
+            {appliedCode ? (
+              <div className="flex items-center justify-between gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm">
+                <div>
+                  <p className="font-medium text-green-900">Coupon applied</p>
+                  <p className="text-xs text-green-700">
+                    {appliedCode} — you saved ৳{(cartData.discount.amount / 100).toFixed(2)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={removeCoupon}
+                  disabled={isApplyingCoupon}
+                  className="text-xs font-medium text-green-900 hover:underline disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                  placeholder="Promo code"
+                  className="h-10 flex-1 rounded-md border border-gray-300 px-3 text-sm uppercase placeholder:normal-case placeholder:text-gray-400 focus:border-brand-primary focus:outline-none"
+                  maxLength={50}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={applyCoupon}
+                  isLoading={isApplyingCoupon}
+                  disabled={!couponInput.trim()}
+                >
+                  Apply
+                </Button>
+              </div>
+            )}
+          </div>
+
           <Button fullWidth size="lg" className="mt-6" onClick={() => router.push('/checkout')}>
             Checkout
           </Button>
@@ -220,11 +311,22 @@ export function CartView() {
   );
 }
 
-function Row({ label, amount, locale }: { label: string; amount: number; locale: 'en' | 'bn' }) {
+function Row({
+  label,
+  amount,
+  locale,
+  accent,
+}: {
+  label: string;
+  amount: number;
+  locale: 'en' | 'bn';
+  accent?: 'green';
+}) {
+  const color = accent === 'green' ? 'text-green-700' : 'text-gray-900';
   return (
     <div className="flex items-baseline justify-between">
       <dt className="text-gray-600">{label}</dt>
-      <dd className="text-gray-900">{formatBDT(amount, locale)}</dd>
+      <dd className={color}>{formatBDT(amount, locale)}</dd>
     </div>
   );
 }

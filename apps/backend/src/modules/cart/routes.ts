@@ -8,7 +8,12 @@ import { asyncHandler } from '../../lib/async-handler';
 import { validate } from '../../middleware/validate';
 import { requireAuth } from '../../middleware/auth';
 import { writeRateLimiter } from '../../middleware/rate-limit';
-import { addToCartSchema, updateCartItemSchema, cartItemIdParamSchema } from '@anzara/validators';
+import {
+  addToCartSchema,
+  applyCouponSchema,
+  updateCartItemSchema,
+  cartItemIdParamSchema,
+} from '@anzara/validators';
 
 export const cartRouter: Router = Router();
 
@@ -35,3 +40,12 @@ cartRouter.delete(
   asyncHandler(cartController.removeItem),
 );
 cartRouter.delete('/', writeRateLimiter, asyncHandler(cartController.clear));
+
+// Coupons on the cart (apply / remove)
+cartRouter.post(
+  '/coupon',
+  writeRateLimiter,
+  validate(applyCouponSchema),
+  asyncHandler(cartController.applyCoupon),
+);
+cartRouter.delete('/coupon', writeRateLimiter, asyncHandler(cartController.removeCoupon));

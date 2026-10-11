@@ -6,7 +6,7 @@ import { cartService } from './service';
 import { sendSuccess } from '../../lib/response';
 import { param } from '../../lib/http';
 import type { AuthedRequest } from '../../middleware/auth';
-import type { AddToCartInput, UpdateCartItemInput } from '@anzara/validators';
+import type { AddToCartInput, ApplyCouponInput, UpdateCartItemInput } from '@anzara/validators';
 
 export const cartController = {
   async get(req: Request, res: Response): Promise<void> {
@@ -34,5 +34,16 @@ export const cartController = {
   async clear(req: Request, res: Response): Promise<void> {
     const userId = (req as AuthedRequest).user!.id;
     sendSuccess(res, await cartService.clear(userId));
+  },
+
+  async applyCoupon(req: Request, res: Response): Promise<void> {
+    const userId = (req as AuthedRequest).user!.id;
+    const body = req.body as ApplyCouponInput;
+    sendSuccess(res, await cartService.applyCoupon(userId, body.code));
+  },
+
+  async removeCoupon(req: Request, res: Response): Promise<void> {
+    const userId = (req as AuthedRequest).user!.id;
+    sendSuccess(res, await cartService.removeCoupon(userId));
   },
 };

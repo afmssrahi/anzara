@@ -14,6 +14,7 @@ import { cartRouter } from './modules/cart/routes';
 import { customerOrdersRouter, adminOrdersRouter } from './modules/orders/routes';
 import { adminSettingsRouter } from './modules/settings/routes';
 import { publicPaymentsRouter } from './modules/payments';
+import { customerCouponsRouter, adminCouponsRouter } from './modules/coupons';
 
 export const apiRouter: Router = Router();
 
@@ -32,6 +33,7 @@ apiRouter.use('/payments', publicPaymentsRouter);
 apiRouter.use('/addresses', addressesRouter);
 apiRouter.use('/cart', cartRouter);
 apiRouter.use('/orders', customerOrdersRouter);
+apiRouter.use('/coupons', customerCouponsRouter);
 
 // Asset uploads (admin only, permission-gated)
 apiRouter.use('/assets', assetsRouter);
@@ -42,3 +44,4 @@ apiRouter.use('/admin/categories', adminCategoriesRouter);
 apiRouter.use('/admin/collections', adminCollectionsRouter);
 apiRouter.use('/admin/orders', adminOrdersRouter);
 apiRouter.use('/admin/settings', adminSettingsRouter);
+apiRouter.use('/admin/coupons', adminCouponsRouter);

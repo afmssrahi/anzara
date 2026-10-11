@@ -14,6 +14,10 @@ export interface UpdateCartItemBody {
   quantity: number;
 }
 
+export interface ApplyCouponBody {
+  code: string;
+}
+
 export function createCartClient({ api }: { api: ApiClient }) {
   return {
     get(token: string) {
@@ -41,6 +45,19 @@ export function createCartClient({ api }: { api: ApiClient }) {
     },
     clear(token: string) {
       return api.request<Cart>('/api/cart', {
+        method: 'DELETE',
+        token,
+      });
+    },
+    applyCoupon(body: ApplyCouponBody, token: string) {
+      return api.request<Cart>('/api/cart/coupon', {
+        method: 'POST',
+        body,
+        token,
+      });
+    },
+    removeCoupon(token: string) {
+      return api.request<Cart>('/api/cart/coupon', {
         method: 'DELETE',
         token,
       });

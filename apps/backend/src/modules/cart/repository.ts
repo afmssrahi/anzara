@@ -89,6 +89,11 @@ export const cartsRepository = {
     return prisma.cartItem.deleteMany({ where: { cartId } });
   },
 
+  /** Set or clear the couponCode on a cart. Pass `null` to clear. */
+  async setCouponCode(cartId: string, code: string | null) {
+    return prisma.cart.update({ where: { id: cartId }, data: { couponCode: code } });
+  },
+
   /** Used by checkout to atomically decrement stock. */
   async txDecrementStock(
     tx: Prisma.TransactionClient,
