@@ -9,26 +9,30 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 
 ## Current Phase
 
-**Phase 2 — Products** ✅ Complete. Phase 3 (Cart + Checkout + COD) next.
+**Phase 3 — Cart, Checkout, Orders, Settings** ✅ Complete. Next: Phase 3.5 (payments + courier + coupons), then Phase 4 (reviews + content + support).
 
 ## Verified working
 
 - Postgres 15 installed natively on Windows, database `anzara_dev` created
 - Redis (Memurai) installed natively, responding to PING
 - Prisma migration applied: 36 tables created
-- Seed completed: 1 SUPER_ADMIN, 21 permissions, 4 system roles, 6 default categories, 4 collections, 22 default settings
+- Seed completed: 1 SUPER_ADMIN, 21 permissions, 4 system roles, 6 default categories, 4 collections, 10 real products with variants, 22 default settings
 - Backend starts on port 4000, `/health` returns 200
-- `POST /api/auth/register` → 201 + JWT (verified end-to-end with real customer creation)
-- `POST /api/auth/login` → 200 + JWT
-- `GET /api/auth/me` → 200 (admin and customer)
-- `PATCH /api/auth/profile` → 200 (admin and customer)
-- `POST /api/auth/change-password` → 200 (admin and customer)
-- `POST /api/auth/forgot-password` → 200
-- `POST /api/auth/otp/request` → 200 (purpose: REGISTER / LOGIN / RESET_PASSWORD)
-- `POST /api/auth/logout` → 200
-- `POST /api/auth/admin/login` → 200 + admin with 21 permissions + JWT
-- Storefront builds with `/login`, `/register`, `/verify-email`, `/forgot-password`, `/reset-password`, `/account`
-- Admin app builds with real auth form + 2FA challenge step + `/dashboard` shell
+- Auth: register / login (customer + admin) / me / profile / change-password / forgot+reset / OTP / logout / 2FA — all 2xx
+- Catalog (public + admin): products (list/featured/by-slug, filters by category/price/size/color/inStock/search/sort/pagination), categories, collections, asset upload via `AssetProvider`
+- **Phase 3 (new):**
+  - Customer addresses (CRUD with default-address handling)
+  - Cart: get / add / update / remove / clear, with per-line stock validation
+  - Checkout: COD order placement inside one Prisma transaction — atomic stock decrement, address row create, order+items+payment+shipment create, SALE inventory rows, cart clear, confirmation email
+  - Customer orders: list (paginated, status filter), get, cancel (PENDING only)
+  - Admin orders: list (search, status filter, pagination), get, status transitions (state-machine enforced), shipment update, internal notes
+  - Admin settings: site-setting key/value store (brand colors, contact, social, SEO)
+  - State machine: `PENDING → CONFIRMED → PROCESSING → SHIPPED → DELIVERED` + `CANCELLED` branch, plus `AWAITING_CONFIRMATION` for ambiguous payment states
+  - Outbox: order confirmation email + 4 status-change emails per order (outbox `emails-outbox/*.json`)
+  - Storefront pages: `/cart`, `/checkout`, `/orders`, `/orders/[id]` (with success banner via `?placed=1`)
+  - Admin pages: `/dashboard/orders`, `/dashboard/orders/[id]`, `/dashboard/settings`
+- All 9 packages: type-check / lint / format clean
+- All 3 apps: build green
 
 ## Login credentials
 
@@ -48,7 +52,7 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 ## Git
 
 - Branch: `main` at https://github.com/afmssrahi/anzara.git
-- 11 commits pushed
+- 12 commits pushed (last: `7e83e3a` — Phase 3)
 
 ## Phase Status
 
@@ -76,7 +80,7 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 - [x] Full monorepo build green (3 apps build, 8 packages pass lint/type-check/format)
 - [x] **Phase 2 catalog verified end-to-end**: public `/api/products` (list, filters, detail), `/api/categories`, `/api/collections`; admin `/api/admin/products` (list/create/delete), `/api/admin/categories`, asset upload via `AssetProvider`
 
-### Phase 1 — Authentication (Day 4-7) — **IN PROGRESS**
+### Phase 1 — Authentication (Day 4-7) — ✅ COMPLETE
 
 **Backend (done):**
 
@@ -115,12 +119,6 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 - [x] Sign out from topbar
 - [x] Build green
 
-**Still TODO in Phase 1 (low priority):**
-
-- [ ] End-to-end manual test of every flow in a real browser (basic curl tests done)
-- [ ] Audit log viewer in admin (post-MVP)
-- [ ] UI copy / BN translation review
-
 ### Phase 2 — Products (Day 8-14) — ✅ COMPLETE
 
 - [x] Admin product CRUD with variants
@@ -135,24 +133,63 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 
 **Asset provider contract:** `apps/backend/src/modules/assets/provider.ts` defines `AssetProvider` (upload/remove). `local-provider.ts` writes to `UPLOAD_DIR` and returns public URL. Switch to Cloudinary = new provider file + factory change. Zero call-site changes.
 
-### Phase 3 — Cart & Checkout (Day 15-21)
+### Phase 3 — Cart, Checkout, Orders, Settings (Day 15-21) — ✅ COMPLETE
 
-- [ ] Cart with stock reservation
-- [ ] Coupon system
-- [ ] Checkout flow
-- [ ] Order creation
-- [ ] COD workflow (priority - first payment method)
-- [ ] SSLCommerz integration (when credentials ready)
-- [ ] Order confirmation email
+**Backend (done):**
 
-### Phase 4 — Orders & Reviews (Day 22-28)
+- [x] `modules/addresses` — customer CRUD with default-address handling; audit on create/delete
+- [x] `modules/cart` — get / add / update / remove / clear, with per-line stock validation
+- [x] `modules/orders` — checkout (COD) in a single Prisma transaction:
+  - re-validate stock + price (re-fetched inside the txn)
+  - atomic stock decrement (transactional `decrement` with `gte` guard — concurrent over-buy returns 409, no partial state)
+  - create shipping + optional billing address, order, items, payment intent, shipment, status history
+  - record SALE inventory transactions
+  - clear cart
+  - send confirmation email outbox
+- [x] `modules/orders` — state machine `PENDING → CONFIRMED → PROCESSING → SHIPPED → DELIVERED` + `CANCELLED` branch (and `AWAITING_CONFIRMATION` for ambiguous payment states); customer cancel from PENDING only
+- [x] `modules/orders` — admin: list/get/status/shipment/notes; auto-advance order status when shipment dispatches or delivers; auto-mark COD payment VERIFIED on DELIVERED
+- [x] `modules/orders` — status-change email at every transition
+- [x] `modules/settings` — site-setting key/value store (brand, contact, social, SEO, theme); admin read+upsert with audit
+- [x] `audit` helper — skip `AuditLog` rows for non-admin actions (customer trail lives in `OrderStatusChange`)
+- [x] Cart totals reads `shipping.flatFee` / `shipping.freeOver` from `SiteSetting` (defaults 0 / 0)
+- [x] Routes: `/api/addresses`, `/api/cart`, `/api/orders`, `/api/admin/orders`, `/api/admin/settings`
+- [x] API client surfaces: `addresses`, `cart`, `orders` (customer + admin), `settings`
+- [x] Validators: `createAddressSchema`, `updateAddressSchema`, `cartItemIdParamSchema`
 
-- [ ] Admin order management
-- [ ] Shipment tracking
-- [ ] Customer order tracking
+**Storefront UI (done):**
+
+- [x] PDP Add-to-cart now calls the real `cart.addItem`; redirects to `/login?return=…` if signed out
+- [x] `/cart` — line items, qty edit, remove, clear, totals, link to checkout
+- [x] `/checkout` — pick saved address or fill new one, customer note, place COD order, redirects to `/orders/[id]?placed=1`
+- [x] `/orders` — paginated customer order list, status filter
+- [x] `/orders/[id]` — order detail with status history, payment, shipment tracking, cancel button (PENDING only)
+
+**Admin UI (done):**
+
+- [x] `/dashboard/orders` — paginated list, search by order number / customer, status filter
+- [x] `/dashboard/orders/[id]` — status transitions (state-machine enforced; disallowed moves are hidden), shipment update (status + tracking number), internal notes composer
+- [x] `/dashboard/settings` — brand colors, contact, social, SEO defaults (editable, writes to `SiteSetting`)
+
+**Verification:**
+
+- [x] `pnpm format:check` / `lint` / `type-check` / `build` all green
+- [x] `scripts/smoke-phase3.ps1` — full e2e (register → cart → checkout → admin list → status walk PENDING/CONFIRMED/PROCESSING/SHIPPED/DELIVERED → shipment tracking → note); outbox contains order confirmation + 4 status emails; final order in DELIVERED with payment auto-VERIFIED
+- [x] `scripts/smoke-oversell.ps1` — stock oversell rejected with 400 + `available: 0`
+- [x] `scripts/smoke-settings.ps1` — settings list/upsert/group filter
+
+### Phase 3.5 — Payments, Couriers, Coupons (next, blocked on credentials)
+
+- [ ] `PaymentProvider` contract + `CodPaymentProvider` (free, default); `SslCommerzPaymentProvider` (paid) — env keys already in place
+- [ ] `CourierProvider` contract + `ManualCourierProvider` (free, default, CSV export) → `PathaoCourierProvider` / `SteadfastCourierProvider` / `RedxCourierProvider` (paid)
+- [ ] Coupon CRUD (admin) + apply/remove on cart (customer) — schema already exists
+- [ ] `RETURN_REQUESTED → RETURNED → REFUNDED` transitions (state-machine stub already there)
+
+### Phase 4 — Reviews, Support, Content (Day 22-28)
+
 - [ ] Verified reviews with photos
-- [ ] WhatsApp support button
-- [ ] Homepage content management
+- [ ] Wishlist (schema exists)
+- [ ] WhatsApp support button (no backend work, just a `ContactField` setting + link)
+- [ ] Homepage content management (banners + Page rows already in schema; build CRUD)
 
 ### Phase 5 — Launch (Day 29-35)
 
@@ -165,7 +202,8 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 
 ## Blocked / Waiting On
 
-- **SSLCommerz merchant account** — Apply now at sslcommerz.com. Takes 1-7 days. Blocks Phase 3 online payment integration. COD is the priority and works without this.
+- **SSLCommerz merchant account** — Apply at sslcommerz.com. Takes 1-7 days. Blocks Phase 3.5 online payment integration. COD is the priority and works without this.
+- **Pathao/Steadfast/RedX merchant accounts** — Courier partners. Need accounts before Phase 3.5.
 - **Brand assets** — Logo, final color palette (using #0F4C5C as default teal, changeable from admin).
 
 ## Service Architecture — Provider Contracts (all free, swappable)
@@ -181,8 +219,8 @@ to change.
 | Search       | `PostgresSearchProvider` (ILIKE)  | Meilisearch / Algolia / Typesense | `apps/backend/src/modules/search/provider.ts`          |
 | Asset upload | `LocalAssetProvider` → disk       | Cloudinary / S3 / R2              | `apps/backend/src/modules/assets/provider.ts`          |
 | Error track  | `PinoErrorReporter` → stdout JSON | Sentry / Bugsnag / Rollbar        | `apps/backend/src/modules/error-reporting/provider.ts` |
-| Payment      | COD                               | SSLCommerz (bKash/Nagad/Card)     | TBD in Phase 3 — same pattern                          |
-| Courier      | manual (CSV export)               | Pathao / Steadfast / RedX         | TBD in Phase 3 — same pattern                          |
+| Payment      | COD (inlined in orders module)    | SSLCommerz (bKash/Nagad/Card)     | Phase 3.5 — `PaymentProvider` interface                |
+| Courier      | manual (admin enters tracking)    | Pathao / Steadfast / RedX         | Phase 3.5 — `CourierProvider` interface                |
 
 **Email today:** No third-party setup required. Every email is written to
 `./emails-outbox/<timestamp>__<tag>__<to>.json` (gitignored). OTP codes are
@@ -205,4 +243,7 @@ See [DECISIONS.md](DECISIONS.md) for full architectural decisions.
 
 ## Next Action
 
-Finish Phase 1: account page, forgot/reset password pages, verify-email page, admin dashboard skeleton. Then run end-to-end manual test.
+Phase 3.5: introduce `PaymentProvider` + `CourierProvider` contracts and
+ship SslCommerz (when credentials land) + at least one courier (Pathao or
+Steadfast). Add coupon admin + apply flow. Run full e2e with the real
+payment path. Then move to Phase 4.
