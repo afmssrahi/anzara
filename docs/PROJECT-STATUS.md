@@ -9,7 +9,7 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 
 ## Current Phase
 
-**Phase 0 — Foundation** (in progress)
+**Phase 1 — Authentication UI** (in progress)
 
 ## Verified working
 
@@ -20,6 +20,8 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 - Backend starts on port 4000, `/health` returns 200
 - `POST /api/auth/register` returns JWT (verified end-to-end with real customer creation)
 - `POST /api/auth/admin/login` returns SUPER_ADMIN with all 21 permissions and JWT
+- Storefront builds with `/login` and `/register` routes
+- Admin app builds with real auth form wired to backend
 
 ## Login credentials
 
@@ -38,8 +40,8 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 
 ## Git
 
-- Initial commit: `8d5ae9c` on `main`
-- Pushed to https://github.com/afmssrahi/anzara.git
+- Branch: `main` at https://github.com/afmssrahi/anzara.git
+- 10 commits pushed
 
 ## Phase Status
 
@@ -49,7 +51,7 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 - [x] Root package.json with shared scripts
 - [x] `.gitignore`, `.env.example`, `README.md`
 - [x] Shared TypeScript config (`tsconfig.base.json`)
-- [x] Shared ESLint + Prettier config (with TypeScript parser)
+- [x] Shared ESLint + Prettier config (with TypeScript parser, react-hooks)
 - [x] Database package (Prisma schema, 27 models)
 - [x] Initial migration applied (36 tables)
 - [x] Seed (admin, permissions, categories, settings)
@@ -58,23 +60,56 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 - [x] Husky pre-commit hook + lint-staged
 - [x] `.editorconfig` + `.vscode/settings.json` + `.vscode/extensions.json`
 - [x] Turborepo cache configured (`node_modules/.cache/turbo`)
-- [x] All 8 packages type-check clean (turbo: 8 cached, 91ms)
-- [x] Git initialized, 3 commits pushed to GitHub
+- [x] All packages type-check clean
+- [x] Git initialized, commits pushed to GitHub
 - [x] Apps: storefront, admin, backend all scaffolded
-- [x] Packages: database, shared-types, ui, config, validators all created
+- [x] Packages: database, shared-types, ui, config, validators, api-client
 - [x] Auth module (customer + admin + OTP) with JWT
 - [x] Backend health check + register + admin login verified end-to-end
+- [x] Full monorepo build green (3 apps build, 8 packages pass lint/type-check/format)
 
-**Phase 0 is complete. Ready for Phase 1.**
+### Phase 1 — Authentication (Day 4-7) — **IN PROGRESS**
 
-### Phase 1 — Authentication (Day 4-7)
+**Backend (done):**
 
-- [ ] Customer registration, login, OTP (email)
-- [ ] Admin login with 2FA
-- [ ] Role + permission system
-- [ ] Audit logging
-- [ ] Bilingual foundation (EN + BN)
-- [ ] Session management + rate limiting
+- [x] JWT auth middleware (`requireAuth`, `requireAdmin`, `requirePermission`)
+- [x] Audit log helper
+- [x] Rate limiting middleware (general + auth + OTP)
+- [x] Cookie-based refresh tokens (httpOnly, sameSite)
+- [x] Customer register, login, OTP verify, resend
+- [x] Admin login (with 2FA challenge), 2FA verify, setup, disable
+- [x] Forgot/reset/change password
+- [x] Profile read + update
+- [x] Session refresh + logout
+- [x] Customer + admin stores (zundo/zustand)
+- [x] API client (`@anzara/api-client`) with auth surface
+
+**Storefront UI (done):**
+
+- [x] Shared UI library (`@anzara/ui`): Button, Input, FormField, Spinner, Badge, Toast, EmptyState
+- [x] i18n provider (EN + BN dictionaries, language switcher, cookie + localStorage persistence)
+- [x] Layout with providers (I18nProvider, ToastProvider)
+- [x] `/login` page (email + password, error handling, redirect to /account)
+- [x] `/register` page (full form, password match validation, redirect)
+- [x] Build green
+
+**Admin UI (done):**
+
+- [x] Real login form wired to `POST /api/auth/admin/login`
+- [x] 2FA challenge step (when admin has 2FA enabled)
+- [x] Stores token + admin user, redirects to `/dashboard`
+- [x] Build green
+
+**Still TODO in Phase 1:**
+
+- [ ] `/account` page (read profile, edit, change password)
+- [ ] `/forgot-password` + `/reset-password` storefront pages
+- [ ] Email verification flow page (`/verify-email`)
+- [ ] Admin dashboard skeleton (`/dashboard`) with auth-gated layout
+- [ ] Permission-aware sidebar (show/hide based on admin permissions)
+- [ ] Resend / Forgot password UI copy review
+- [ ] End-to-end manual test of every flow
+- [ ] Audit log viewer in admin (post-MVP)
 
 ### Phase 2 — Products (Day 8-14)
 
@@ -117,8 +152,8 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 ## Blocked / Waiting On
 
 - **SSLCommerz merchant account** — Apply now at sslcommerz.com. Takes 1-7 days. Blocks Phase 3 payment integration.
-- **GitHub repo access** — https://github.com/afmssrahi/anzara.git
-- **Brand assets** — Logo, final color palette (using #0F4C5C as default teal, changeable from admin)
+- **Resend API key** — Needed for email OTP delivery. Can use console transport in dev for now.
+- **Brand assets** — Logo, final color palette (using #0F4C5C as default teal, changeable from admin).
 
 ## Decisions Log
 
@@ -126,4 +161,4 @@ See [DECISIONS.md](DECISIONS.md) for full architectural decisions.
 
 ## Next Action
 
-Continue Phase 0: create shared configs and package scaffolds.
+Finish Phase 1: account page, forgot/reset password pages, verify-email page, admin dashboard skeleton. Then run end-to-end manual test.

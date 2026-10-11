@@ -95,11 +95,7 @@ export async function requireAuth(
 }
 
 /** Require admin authentication. */
-export function requireAdmin(
-  req: AuthedRequest,
-  res: Response,
-  next: NextFunction,
-): void {
+export function requireAdmin(req: AuthedRequest, res: Response, next: NextFunction): void {
   requireAuth(req, res, (err) => {
     if (err) {
       next(err);

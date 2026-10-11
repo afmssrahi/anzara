@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { AdminProviders } from './providers';
 
 export const metadata: Metadata = {
   title: 'Anzara Admin',
@@ -9,8 +10,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen antialiased">{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen antialiased">
+        <AdminProviders>{children}</AdminProviders>
+      </body>
     </html>
   );
 }

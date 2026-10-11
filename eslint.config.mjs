@@ -1,9 +1,17 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
+import react from 'eslint-plugin-react';
 
 export default [
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  reactHooks.configs['recommended-latest'],
+  {
+    files: ['**/*.{ts,tsx,js,jsx}'],
+    plugins: { react },
+    settings: { react: { version: 'detect' } },
+  },
   {
     ignores: [
       '**/node_modules/**',

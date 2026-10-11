@@ -10,12 +10,7 @@ import QRCode from 'qrcode';
 import { getEnv } from '@anzara/config';
 import { authRepository } from './repository';
 import { emailService } from '../../lib/email';
-import {
-  ConflictError,
-  UnauthorizedError,
-  BadRequestError,
-  NotFoundError,
-} from '../../lib/errors';
+import { ConflictError, UnauthorizedError, BadRequestError, NotFoundError } from '../../lib/errors';
 import type {
   CustomerRegisterInput,
   CustomerLoginInput,
@@ -307,9 +302,7 @@ export const authService = {
 
   // ==================== /me — current user ====================
   async getCurrentUser(userId: string) {
-    const user = await authRepository.findUserByEmail(
-      (await this.getUserEmail(userId)) ?? '',
-    );
+    const user = await authRepository.findUserByEmail((await this.getUserEmail(userId)) ?? '');
     if (!user) throw new NotFoundError('User not found');
     return {
       id: user.id,
@@ -357,11 +350,9 @@ export const authService = {
     const user = await authRepository.findUserByEmail(email);
     // Always return success to avoid email enumeration
     if (!user) return;
-    const token = jwt.sign(
-      { sub: user.id, purpose: 'reset' },
-      getEnv().JWT_REFRESH_SECRET,
-      { expiresIn: `${RESET_TOKEN_EXPIRY_MINUTES}m` } as SignOptions,
-    );
+    const token = jwt.sign({ sub: user.id, purpose: 'reset' }, getEnv().JWT_REFRESH_SECRET, {
+      expiresIn: `${RESET_TOKEN_EXPIRY_MINUTES}m`,
+    } as SignOptions);
     await emailService.send({
       to: email,
       subject: 'Reset your Anzara password',

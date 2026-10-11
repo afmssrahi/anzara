@@ -57,3 +57,6 @@ export interface AuthSession {
   expiresAt: ISODateString;
   user: CustomerProfile | AdminUser;
 }
+
+/** Either a customer or an admin — the shape used by the `/me` endpoint. */
+export type AuthUser = CustomerProfile | AdminUser;

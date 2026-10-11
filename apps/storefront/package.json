@@ -12,6 +12,7 @@
     "clean": "rm -rf .next .turbo"
   },
   "dependencies": {
+    "@anzara/api-client": "workspace:*",
     "@anzara/config": "workspace:*",
     "@anzara/shared-types": "workspace:*",
     "@anzara/ui": "workspace:*",
