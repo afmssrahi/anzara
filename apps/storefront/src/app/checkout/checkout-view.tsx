@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ApiError } from '@anzara/api-client';
 import type { Cart, UserAddress } from '@anzara/shared-types';
 import { Button, FormField, Input, Select, Textarea, formatBDT, useT, useToast } from '@anzara/ui';
-import { addresses, cart as cartApi, orders } from '../../lib/api';
+import { addresses, cart as cartApi, orders, payments } from '../../lib/api';
 import { useAuthStore } from '../../lib/auth-store';
 
 type Mode = 'pick' | 'new';
@@ -42,6 +42,8 @@ export function CheckoutView() {
 
   const [cartData, setCartData] = useState<Cart | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<UserAddress[]>([]);
+  const [enabledMethods, setEnabledMethods] = useState<Array<{ id: string; label: string }>>([]);
+  const [paymentMethod, setPaymentMethod] = useState<string>('COD');
   const [mode, setMode] = useState<Mode>('pick');
   const [selectedId, setSelectedId] = useState<string>('');
   const [form, setForm] = useState<AddressForm>({
@@ -62,14 +64,21 @@ export function CheckoutView() {
     setIsLoading(true);
     (async () => {
       try {
-        const [c, addrs] = await Promise.all([
+        const [c, addrs, pm] = await Promise.all([
           cartApi.get(accessToken),
           addresses.list(accessToken).catch(() => [] as UserAddress[]),
+          payments.enabled().catch(() => ({
+            methods: [{ id: 'COD', label: 'Cash on Delivery', provider: 'cod' }],
+            currency: 'BDT' as const,
+          })),
         ]);
         if (cancelled) return;
         setCartData(c);
         setSavedAddresses(addrs);
-        const def = addrs.find((a) => a.isDefault) ?? addrs[0];
+        setEnabledMethods(pm.methods);
+        // Default to the first enabled method (today: only COD).
+        if (pm.methods[0]) setPaymentMethod(pm.methods[0].id);
+        const def = addrs.find((a: UserAddress) => a.isDefault) ?? addrs[0];
         if (def) setSelectedId(def.id);
         else setMode('new');
       } finally {
@@ -122,9 +131,13 @@ export function CheckoutView() {
     }
     setIsSubmitting(true);
     try {
+      // The backend rejects methods that aren't currently enabled. Today
+      // the only option is COD, so this is effectively `as 'COD'`, but
+      // we cast at the boundary so future providers (SSLCommerz, bKash,
+      // Nagad) can flow through without touching the storefront.
       const order = await orders.place(
         {
-          paymentMethod: 'COD',
+          paymentMethod: paymentMethod as 'COD' | 'BKASH' | 'NAGAD' | 'CARD' | 'ROCKET',
           shippingAddress: normalizeForApi(shippingAddress),
           ...(note.trim() ? { customerNote: note.trim() } : {}),
         },
@@ -219,6 +232,41 @@ export function CheckoutView() {
             </div>
           </div>
 
+          {/* Payment method */}
+          <div className="rounded-lg border bg-white p-6">
+            <h2 className="text-base font-semibold text-gray-900">Payment method</h2>
+            <div className="mt-3 space-y-2">
+              {enabledMethods.map((m) => (
+                <label
+                  key={m.id}
+                  className={
+                    paymentMethod === m.id
+                      ? 'flex cursor-pointer gap-3 rounded-md border-2 border-brand-primary bg-orange-50/30 p-3'
+                      : 'flex cursor-pointer gap-3 rounded-md border border-gray-200 p-3 hover:border-gray-300'
+                  }
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value={m.id}
+                    checked={paymentMethod === m.id}
+                    onChange={() => setPaymentMethod(m.id)}
+                    className="mt-1"
+                  />
+                  <div className="text-sm">
+                    <p className="font-medium text-gray-900">{m.label}</p>
+                    {m.id === 'COD' && (
+                      <p className="text-gray-600">Pay with cash when your order is delivered.</p>
+                    )}
+                  </div>
+                </label>
+              ))}
+              {enabledMethods.length === 0 && (
+                <p className="text-sm text-gray-500">Loading payment methods…</p>
+              )}
+            </div>
+          </div>
+
           {/* Note */}
           <div className="rounded-lg border bg-white p-6">
             <h2 className="text-base font-semibold text-gray-900">Order note</h2>
@@ -278,8 +326,14 @@ export function CheckoutView() {
             </div>
           </dl>
           <div className="mt-4 rounded-md border border-dashed border-gray-300 bg-gray-50 p-3 text-xs text-gray-600">
-            <p className="font-medium text-gray-900">Cash on delivery</p>
-            <p>Pay ৳{(cartData.total.amount / 100).toFixed(2)} when your order arrives.</p>
+            <p className="font-medium text-gray-900">
+              {enabledMethods.find((m) => m.id === paymentMethod)?.label ?? paymentMethod}
+            </p>
+            {paymentMethod === 'COD' ? (
+              <p>Pay ৳{(cartData.total.amount / 100).toFixed(2)} when your order arrives.</p>
+            ) : (
+              <p>You'll be redirected to the payment gateway after placing the order.</p>
+            )}
           </div>
           <Button type="submit" fullWidth size="lg" className="mt-6" isLoading={isSubmitting}>
             Place order

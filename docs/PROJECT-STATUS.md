@@ -1,6 +1,6 @@
 # Anzara - Project Status
 
-Last updated: 2026-10-11
+Last updated: 2026-10-12
 
 ## Overview
 
@@ -9,7 +9,7 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 
 ## Current Phase
 
-**Phase 3 — Cart, Checkout, Orders, Settings** ✅ Complete. Next: Phase 3.5 (payments + courier + coupons), then Phase 4 (reviews + content + support).
+**Phase 3.5 — COD polished; settlement rails one file drop-in** ✅ COD end-to-end works. SSLCommerz / Pathao / Steadfast / RedX are blocked only on merchant credentials — see `docs/SETTLEMENTS.md` for the exact 4-step drop-in. Next: coupons, then Phase 4 (reviews + content + support).
 
 ## Verified working
 
@@ -31,6 +31,12 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
   - Outbox: order confirmation email + 4 status-change emails per order (outbox `emails-outbox/*.json`)
   - Storefront pages: `/cart`, `/checkout`, `/orders`, `/orders/[id]` (with success banner via `?placed=1`)
   - Admin pages: `/dashboard/orders`, `/dashboard/orders/[id]`, `/dashboard/settings`
+- **Phase 3.5 (settlement rails):**
+  - `PaymentProvider` contract + `CodPaymentProvider` (free, default) — orders service delegates onPlaced/onCancelled/onDelivered to it
+  - `CourierProvider` contract + `ManualCourierProvider` (admin-entered tracking) — same shape, today is a no-op passthrough
+  - `GET /api/payments/methods` — public endpoint driving the storefront's payment picker
+  - Checkout UI now uses the dynamic list
+  - Email templates extracted to `orders/email-templates.ts`
 - All 9 packages: type-check / lint / format clean
 - All 3 apps: build green
 
@@ -177,10 +183,18 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 - [x] `scripts/smoke-oversell.ps1` — stock oversell rejected with 400 + `available: 0`
 - [x] `scripts/smoke-settings.ps1` — settings list/upsert/group filter
 
-### Phase 3.5 — Payments, Couriers, Coupons (next, blocked on credentials)
+### Phase 3.5 — Payments, Couriers, Coupons (COD shipped; one-file drop-in for the rest)
 
-- [ ] `PaymentProvider` contract + `CodPaymentProvider` (free, default); `SslCommerzPaymentProvider` (paid) — env keys already in place
-- [ ] `CourierProvider` contract + `ManualCourierProvider` (free, default, CSV export) → `PathaoCourierProvider` / `SteadfastCourierProvider` / `RedxCourierProvider` (paid)
+- [x] `PaymentProvider` contract + `CodPaymentProvider` (free, default) — wired into the orders service
+- [x] `CourierProvider` contract + `ManualCourierProvider` (free, default) — today's admin-entered tracking behavior, now behind a contract
+- [x] `GET /api/payments/methods` — public endpoint that the storefront's checkout calls to render the payment picker. Today returns just COD; new methods appear automatically when added to the factory.
+- [x] Checkout UI uses the dynamic list (no hard-coded "Cash on Delivery" label)
+- [x] Orders service delegates payment side effects (onOrderPlaced / onOrderCancelled / onOrderDelivered) to the active provider — no inline `if (method === 'COD') …` branches
+- [x] Email templates extracted to `orders/email-templates.ts`; the service is no longer 500 lines
+- [x] `scripts/smoke-payments.ps1` — public methods endpoint, unsupported method rejected, COD succeeds
+- [x] `scripts/smoke-cancel.ps1` — customer cancel flips payment to FAILED with reason
+- [ ] `SslCommerzPaymentProvider` (paid) — env keys already reserved; see `docs/SETTLEMENTS.md` for the exact 4-step drop-in
+- [ ] `PathaoCourierProvider` / `SteadfastCourierProvider` / `RedxCourierProvider` (paid) — see `docs/SETTLEMENTS.md`
 - [ ] Coupon CRUD (admin) + apply/remove on cart (customer) — schema already exists
 - [ ] `RETURN_REQUESTED → RETURNED → REFUNDED` transitions (state-machine stub already there)
 
@@ -213,14 +227,14 @@ implementation is free and in-process; swapping to a paid alternative is a
 one-file change (the factory). No call site, controller, UI, or schema needs
 to change.
 
-| Concern      | Free default (today)              | Optional adapter (later)          | Contract file                                          |
-| ------------ | --------------------------------- | --------------------------------- | ------------------------------------------------------ |
-| Email        | `FileEmailProvider` → local JSON  | `ResendEmailProvider` (HTTP)      | `apps/backend/src/modules/email/provider.ts`           |
-| Search       | `PostgresSearchProvider` (ILIKE)  | Meilisearch / Algolia / Typesense | `apps/backend/src/modules/search/provider.ts`          |
-| Asset upload | `LocalAssetProvider` → disk       | Cloudinary / S3 / R2              | `apps/backend/src/modules/assets/provider.ts`          |
-| Error track  | `PinoErrorReporter` → stdout JSON | Sentry / Bugsnag / Rollbar        | `apps/backend/src/modules/error-reporting/provider.ts` |
-| Payment      | COD (inlined in orders module)    | SSLCommerz (bKash/Nagad/Card)     | Phase 3.5 — `PaymentProvider` interface                |
-| Courier      | manual (admin enters tracking)    | Pathao / Steadfast / RedX         | Phase 3.5 — `CourierProvider` interface                |
+| Concern      | Free default (today)                             | Optional adapter (later)                                                            | Contract file                                          |
+| ------------ | ------------------------------------------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Email        | `FileEmailProvider` → local JSON                 | `ResendEmailProvider` (HTTP)                                                        | `apps/backend/src/modules/email/provider.ts`           |
+| Search       | `PostgresSearchProvider` (ILIKE)                 | Meilisearch / Algolia / Typesense                                                   | `apps/backend/src/modules/search/provider.ts`          |
+| Asset upload | `LocalAssetProvider` → disk                      | Cloudinary / S3 / R2                                                                | `apps/backend/src/modules/assets/provider.ts`          |
+| Error track  | `PinoErrorReporter` → stdout JSON                | Sentry / Bugsnag / Rollbar                                                          | `apps/backend/src/modules/error-reporting/provider.ts` |
+| Payment      | `CodPaymentProvider` (free, COD only)            | `SslCommerzPaymentProvider` (paid)                                                  | `apps/backend/src/modules/payments/provider.ts`        |
+| Courier      | `ManualCourierProvider` (admin-entered tracking) | `PathaoCourierProvider` / `SteadfastCourierProvider` / `RedxCourierProvider` (paid) | `apps/backend/src/modules/couriers/provider.ts`        |
 
 **Email today:** No third-party setup required. Every email is written to
 `./emails-outbox/<timestamp>__<tag>__<to>.json` (gitignored). OTP codes are
@@ -243,7 +257,9 @@ See [DECISIONS.md](DECISIONS.md) for full architectural decisions.
 
 ## Next Action
 
-Phase 3.5: introduce `PaymentProvider` + `CourierProvider` contracts and
-ship SslCommerz (when credentials land) + at least one courier (Pathao or
-Steadfast). Add coupon admin + apply flow. Run full e2e with the real
-payment path. Then move to Phase 4.
+Phase 3.5 partial: `PaymentProvider` + `CourierProvider` contracts are
+in place and COD is the only enabled payment method, end-to-end. When
+SSLCommerz / Pathao / Steadfast / RedX credentials land, follow
+`docs/SETTLEMENTS.md` for the exact 4-step drop-in. Next: coupon
+admin + apply/remove on cart. Then Phase 4 (reviews + content +
+support).

@@ -42,3 +42,5 @@ export type {
 } from './orders';
 export { createSettingsClient } from './settings';
 export type { SettingsClient, SiteSetting, UpsertSettingBody } from './settings';
+export { createPaymentsClient } from './payments';
+export type { PaymentsClient, EnabledPaymentMethodsResponse } from './payments';

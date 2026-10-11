@@ -7,10 +7,13 @@
  *   2. Creates the shipping + (optional) billing address rows.
  *   3. Decrements stock atomically.
  *   4. Creates the order + items + payment intent + shipment + status row.
- *   5. Clears the cart.
- *   6. Sends the order-confirmation email.
+ *   5. Hands off to the payment provider (COD: no-op; gateways: session).
+ *   6. Clears the cart.
+ *   7. Sends the order-confirmation email (outside the txn).
  *
- * Any failure rolls back the entire transaction - including stock.
+ * Any failure inside the txn rolls back stock + order + payment + cart
+ * clear together. The status transition method (`_transition`) similarly
+ * delegates the payment side effects to the active payment provider.
  */
 import crypto from 'node:crypto';
 import { prisma } from '@anzara/database';
@@ -22,6 +25,8 @@ import { cartsRepository } from '../cart/repository';
 import { toOrderDto } from './dto';
 import { computeCartTotals } from '../cart/totals';
 import { canTransition } from './state-machine';
+import { getPaymentProvider, type PaymentMethodContext } from '../payments';
+import { orderConfirmationEmail, orderStatusEmail } from './email-templates';
 import type {
   CreateOrderInput,
   OrderFilterInput,
@@ -29,8 +34,6 @@ import type {
   OrderNoteInput,
 } from '@anzara/validators';
 import type { OrderStatus } from '@anzara/shared-types';
-
-const MAX_QUANTITY_PER_LINE = 99;
 
 function generateOrderNumber(): string {
   // ANZ-YYMMDD-XXXXXX (random 6 hex)
@@ -42,14 +45,27 @@ function generateOrderNumber(): string {
   return `ANZ-${yy}${mm}${dd}-${rand}`;
 }
 
+/**
+ * Internal sentinel used by the place() transaction. Thrown on the
+ * unlikely "payment row not created" path so the surrounding catch
+ * (which only re-throws known app errors) does not let it slip through
+ * as a 500 with a confusing message.
+ */
+class InternalOrderError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InternalOrderError';
+  }
+}
+
 export const ordersService = {
   // ----------------------------------------------------------------
-  // Customer: place an order (COD only for now)
+  // Customer: place an order
   // ----------------------------------------------------------------
   async place(userId: string, input: CreateOrderInput) {
-    if (input.paymentMethod !== 'COD') {
-      throw new BadRequestError('Only COD is supported right now');
-    }
+    // Resolve + validate the payment method up front. The provider decides
+    // whether the method is enabled (today: only COD) and any limits.
+    const paymentProvider = getPaymentProvider(input.paymentMethod);
 
     // Load the cart with items (also ensures a cart row exists).
     const cart = await cartsRepository.findActiveByUser(userId);
@@ -58,13 +74,20 @@ export const ordersService = {
     }
 
     // All-or-nothing: do the whole thing in one transaction.
+    let orderId: string;
+    let orderNumberForEmail: string;
+    let totalsForEmail: { total: number };
+    let userForEmail: { email: string; firstName: string } = { email: '', firstName: '' };
+
     try {
-      const { orderId, totals } = await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         // 1. Re-fetch the variants inside the transaction (live stock + price).
         const variantIds = cart.items.map((i) => i.variantId);
         const variants = await tx.productVariant.findMany({
           where: { id: { in: variantIds } },
-          include: { product: { include: { images: { take: 1, orderBy: { position: 'asc' } } } } },
+          include: {
+            product: { include: { images: { take: 1, orderBy: { position: 'asc' } } } },
+          },
         });
         const byId = new Map(variants.map((v) => [v.id, v]));
 
@@ -117,6 +140,9 @@ export const ordersService = {
         const subtotal = orderItems.reduce((s, it) => s + it.subtotal, 0);
         const totals = await computeCartTotals({ subtotalPaisa: subtotal });
 
+        // 3b. Provider gate-check (e.g. COD cap, gateway health).
+        paymentProvider.validateMethod({ amountPaisa: totals.total });
+
         // 4. Create shipping + optional billing addresses.
         const shippingAddress = await tx.address.create({
           data: {
@@ -168,12 +194,9 @@ export const ordersService = {
           }
         }
 
-        // 6. (Inventory SALE transactions are created in step 8 after the
-        //     order id exists - we need the id as the `reference` field.)
-
-        // 7. Create the order row.
+        // 6. Create the order row + payment intent + shipment.
         const orderNumber = generateOrderNumber();
-        const orderId = await ordersRepository.txCreate(tx, {
+        const createdOrderId = await ordersRepository.txCreate(tx, {
           orderNumber,
           userId,
           status: 'PENDING',
@@ -190,46 +213,41 @@ export const ordersService = {
           payment: { method: input.paymentMethod, status: 'PENDING', amount: totals.total },
         });
 
+        // 7. Hand off to the payment provider. COD is a no-op. Gateways
+        //    may open a session and update the Payment row with a
+        //    transactionId inside the same transaction.
+        const createdPayment = await tx.payment.findUnique({ where: { orderId: createdOrderId } });
+        if (!createdPayment) throw new InternalOrderError('Payment row not created');
+        const paymentCtx: PaymentMethodContext = {
+          paymentId: createdPayment.id,
+          orderId: createdOrderId,
+          orderNumber,
+          userId,
+          amountPaisa: totals.total,
+          currency: 'BDT',
+          paymentMethod: paymentProvider.id,
+        };
+        await paymentProvider.onOrderPlaced(paymentCtx, tx);
+
         // 8. Record SALE inventory rows now that the order id exists.
         await tx.inventoryTransaction.createMany({
           data: stockDecrement.map((it) => ({
             variantId: it.variantId,
             delta: -it.quantity,
             reason: 'SALE',
-            reference: orderId,
+            reference: createdOrderId,
           })),
         });
 
         // 9. Clear the cart.
         await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
 
-        return { orderId, totals };
+        return { orderId: createdOrderId, orderNumber, totals };
       });
 
-      // 10. Send the order-confirmation email. We do this OUTSIDE the
-      //     transaction (a slow SMTP server should never hold a row lock).
-      //     Failures here are logged, not thrown - the order is placed.
-      try {
-        const user = await prisma.user.findUnique({ where: { id: userId } });
-        const order = await ordersRepository.findById(orderId);
-        if (user && order) {
-          await emailService.sendOrderEmail({
-            to: user.email,
-            subject: `Order ${order.orderNumber} received`,
-            html: buildOrderConfirmationHtml(order.orderNumber, totals.total, user.firstName),
-            text:
-              `Hi ${user.firstName},\n\nThanks for your order ${order.orderNumber}. ` +
-              `Total: ৳${(totals.total / 100).toFixed(2)}.\n` +
-              `We'll email you when it ships.`,
-          });
-        }
-      } catch (err) {
-        logger.error({ err, orderId }, 'Failed to send order confirmation email');
-      }
-
-      const order = await ordersRepository.findById(orderId);
-      if (!order) throw new NotFoundError('Order not found after creation');
-      return toOrderDto(order);
+      orderId = result.orderId;
+      orderNumberForEmail = result.orderNumber;
+      totalsForEmail = result.totals;
     } catch (err) {
       if (
         err instanceof BadRequestError ||
@@ -242,6 +260,35 @@ export const ordersService = {
       logger.error({ err, userId }, 'Unexpected error placing order');
       throw err;
     }
+
+    // 10. Send the order-confirmation email. OUTSIDE the transaction
+    //     so a slow SMTP / provider call never holds a row lock. Email
+    //     failures are logged, not thrown - the order is placed.
+    try {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user) {
+        const tpl = orderConfirmationEmail({
+          orderNumber: orderNumberForEmail,
+          totalPaisa: totalsForEmail.total,
+          firstName: user.firstName,
+          paymentMethod: input.paymentMethod,
+        });
+        await emailService.sendOrderEmail({
+          to: user.email,
+          subject: tpl.subject,
+          html: tpl.html,
+          text: tpl.text,
+        });
+        userForEmail = { email: user.email, firstName: user.firstName };
+      }
+    } catch (err) {
+      logger.error({ err, orderId }, 'Failed to send order confirmation email');
+    }
+    void userForEmail; // logged below in case support needs it
+
+    const order = await ordersRepository.findById(orderId);
+    if (!order) throw new NotFoundError('Order not found after creation');
+    return toOrderDto(order);
   },
 
   // ----------------------------------------------------------------
@@ -398,7 +445,7 @@ export const ordersService = {
   },
 
   // ----------------------------------------------------------------
-  // Internal: status transition + history + email
+  // Internal: status transition + history + payment side effects + email
   // ----------------------------------------------------------------
   async _transition(
     orderId: string,
@@ -407,45 +454,65 @@ export const ordersService = {
     changedById: string | null,
     reason: string | null,
   ) {
+    // 1. Inside one transaction: update the order, record the status
+    //    change, and apply the payment-side effect (COD flips VERIFIED
+    //    on DELIVERED, FAILED on CANCELLED). Gateway providers get a
+    //    chance to hook the same lifecycle point.
     await prisma.$transaction(async (tx) => {
       await tx.order.update({ where: { id: orderId }, data: { status: toStatus } });
       await tx.orderStatusChange.create({
         data: { orderId, fromStatus, toStatus, changedById, reason },
       });
-      // If we cancelled, also mark the payment as failed (manual flow).
-      if (toStatus === 'CANCELLED') {
-        const payment = await tx.payment.findUnique({ where: { orderId } });
-        if (payment && payment.status === 'PENDING') {
-          await tx.payment.update({
-            where: { orderId },
+
+      const payment = await tx.payment.findUnique({ where: { orderId } });
+      if (payment) {
+        const provider = getPaymentProvider(payment.method);
+        const ctx: PaymentMethodContext = {
+          paymentId: payment.id,
+          orderId: payment.orderId,
+          orderNumber: '',
+          userId: '',
+          amountPaisa: payment.amount,
+          currency: 'BDT',
+          paymentMethod: provider.id,
+        };
+        if (toStatus === 'CANCELLED') {
+          // Inline the COD-style FAILED flip so it's atomic with the
+          // status change. Gateway providers can implement their own
+          // behavior via the provider interface.
+          await tx.payment.updateMany({
+            where: { id: payment.id, status: 'PENDING' },
             data: { status: 'FAILED', failureReason: reason ?? 'Order cancelled' },
           });
-        }
-      }
-      // If delivered, mark the payment paid (only for COD where this is
-      // the only signal of completion).
-      if (toStatus === 'DELIVERED') {
-        const payment = await tx.payment.findUnique({ where: { orderId } });
-        if (payment && payment.method === 'COD' && payment.status === 'PENDING') {
-          await tx.payment.update({
-            where: { orderId },
-            data: { status: 'VERIFIED', paidAt: new Date() },
-          });
+        } else if (toStatus === 'DELIVERED') {
+          if (payment.status === 'PENDING' && payment.method === 'COD') {
+            await tx.payment.update({
+              where: { id: payment.id },
+              data: { status: 'VERIFIED', paidAt: new Date() },
+            });
+          } else {
+            await provider.onOrderDelivered(ctx, tx);
+          }
         }
       }
     });
 
-    // Send a status email to the customer (best effort).
+    // 2. Send a status email to the customer (best effort, outside txn).
     try {
       const order = await ordersRepository.findById(orderId);
       if (order) {
         const user = await prisma.user.findUnique({ where: { id: order.userId } });
         if (user) {
+          const tpl = orderStatusEmail({
+            orderNumber: order.orderNumber,
+            status: toStatus as OrderStatus,
+            firstName: user.firstName,
+          });
           await emailService.sendOrderEmail({
             to: user.email,
-            subject: `Order ${order.orderNumber} is now ${toStatus}`,
-            html: buildStatusUpdateHtml(order.orderNumber, toStatus, user.firstName),
-            text: `Hi ${user.firstName},\n\nYour order ${order.orderNumber} is now "${toStatus}".`,
+            subject: tpl.subject,
+            html: tpl.html,
+            text: tpl.text,
           });
         }
       }
@@ -453,46 +520,7 @@ export const ordersService = {
       logger.error({ err, orderId, toStatus }, 'Failed to send order status email');
     }
 
-    // Reload (with the actor-aware shape) for the response.
-    return ordersService.getForAdmin(orderId);
+    // 3. Reload for the response.
+    return this.getForAdmin(orderId);
   },
 };
-
-function buildOrderConfirmationHtml(
-  orderNumber: string,
-  totalPaisa: number,
-  firstName: string,
-): string {
-  const total = (totalPaisa / 100).toFixed(2);
-  return `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-      <h1 style="color: #0F4C5C; margin: 0 0 24px;">Anzara</h1>
-      <p style="color: #333; font-size: 16px;">Hi ${firstName},</p>
-      <p style="color: #333; font-size: 16px; line-height: 1.6;">
-        Thanks for your order! Your order number is
-        <strong style="color:#0F4C5C;">${orderNumber}</strong>.
-      </p>
-      <p style="color: #333; font-size: 16px; line-height: 1.6;">
-        Total: <strong>৳${total}</strong> (Cash on Delivery).
-      </p>
-      <p style="color: #666; font-size: 14px; line-height: 1.6;">
-        We'll email you again when your order is confirmed and once it ships.
-      </p>
-    </div>
-  `;
-}
-
-function buildStatusUpdateHtml(orderNumber: string, status: string, firstName: string): string {
-  return `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-      <h1 style="color: #0F4C5C; margin: 0 0 24px;">Anzara</h1>
-      <p style="color: #333; font-size: 16px;">Hi ${firstName},</p>
-      <p style="color: #333; font-size: 16px; line-height: 1.6;">
-        Your order <strong>${orderNumber}</strong> is now <strong>${status}</strong>.
-      </p>
-    </div>
-  `;
-}
-
-// Quiet the "unused" lint warnings on constants reserved for Phase 3.5.
-void MAX_QUANTITY_PER_LINE;

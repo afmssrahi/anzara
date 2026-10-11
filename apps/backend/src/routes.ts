@@ -13,6 +13,7 @@ import { addressesRouter } from './modules/addresses/routes';
 import { cartRouter } from './modules/cart/routes';
 import { customerOrdersRouter, adminOrdersRouter } from './modules/orders/routes';
 import { adminSettingsRouter } from './modules/settings/routes';
+import { publicPaymentsRouter } from './modules/payments';
 
 export const apiRouter: Router = Router();
 
@@ -23,6 +24,9 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/products', productsRouter);
 apiRouter.use('/categories', categoriesRouter);
 apiRouter.use('/collections', collectionsRouter);
+
+// Public payment-method list (drives the storefront's payment picker)
+apiRouter.use('/payments', publicPaymentsRouter);
 
 // Customer-scoped
 apiRouter.use('/addresses', addressesRouter);
