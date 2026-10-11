@@ -36,12 +36,18 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 - Database: anzara_dev
 - **For production, change all credentials**
 
+## Git
+
+- Initial commit: `8d5ae9c` on `main`
+- Pushed to https://github.com/afmssrahi/anzara.git
+
 ## Phase Status
 
 ### Phase 0 — Foundation (Day 1-3)
 - [x] Monorepo structure (pnpm workspaces + Turborepo)
 - [x] Root package.json with shared scripts
 - [x] .gitignore, .env.example, README
+- [x] Git init, initial commit, pushed to GitHub
 - [x] Shared TypeScript config
 - [x] Shared ESLint + Prettier config
 - [x] Database package (Prisma schema)
