@@ -1,6 +1,6 @@
 # Anzara - Project Status
 
-Last updated: 2026-10-13
+Last updated: 2026-10-15
 
 ## Overview
 
@@ -9,7 +9,7 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 
 ## Current Phase
 
-**Phase 3.5 — Coupons + settlement rails done; only real gateways remain** ✅ Customer can apply a coupon on the cart, the discount flows through to checkout atomically (CouponUsage row + usageCount increment inside the same transaction, auto-deactivate when the limit is hit), and admins have a full CRUD at `/dashboard/coupons`. SSLCommerz / Pathao / Steadfast / RedX remain a one-file drop-in (`docs/SETTLEMENTS.md`). Next: Phase 4 (reviews + content + support).
+**Phase 4 — Reviews, Wishlist, Content, Support** ✅ Customers can leave a verified-purchase review (auto-flagged verified, moderated before publishing), star the product with a histogram + average. Customers can build a wishlist (heart on PDP + `/account/wishlist` page), and admins get `/dashboard/reviews` to approve/reject/feature/delete. The storefront renders active homepage banners, floating WhatsApp support button (reads `social.whatsapp` from the public settings endpoint), and admins get full CRUD for banners and pages at `/dashboard/content`. Public settings endpoint exposes only `isPublic = true` rows. Next: Phase 5 (launch — GA4, SEO, sitemap, production deploy).
 
 ## Verified working
 
@@ -203,16 +203,22 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
   - Admin: `/dashboard/coupons` list (paginated, searchable, activate/deactivate, delete) + `/dashboard/coupons/create` and `/dashboard/coupons/[id]` form
   - Supports: percentage / fixed, min order, max discount cap, per-user + total usage limits, start/end dates, first-order-only, product / category restrictions
   - `scripts/smoke-coupons.ps1` — full end-to-end (admin create → list → customer validate → apply → checkout with discount → usageCount++ + auto-deactivate → depleted rejected → 2nd order without coupon OK → deactivated rejected)
+- **Phase 4 (reviews + wishlist + content + support):**
+  - **Reviews**: customer `POST /api/reviews` requires a non-cancelled order containing the product; new review is auto-verified (buyer) and held for moderation. Admin `PATCH /api/admin/reviews/:id/moderate` toggles `isApproved` / `isFeatured` / `isVerified`. Public list + summary (avg + per-star breakdown) only return approved reviews.
+  - **Wishlist**: `POST /api/wishlist/items` is idempotent; `GET /api/wishlist/items/:productId` is a fast check; `DELETE` removes. Storefront heart on every product image (PDP + grids), `/account/wishlist` page for the full list.
+  - **Content**: `Banner` and `Page` models fully CRUD'd from `/dashboard/content`. Public `GET /api/content/banners` returns active banners (position-ordered, time-windowed); `GET /api/content/pages/:slug` returns a published page. Storefront renders banners on `/` and shows the WhatsApp button from the public settings endpoint.
+  - **Public settings**: `GET /api/settings` returns only `isPublic = true` rows; `social.whatsapp` is the seed-defined public key. No auth, no leak of internal settings.
+  - `scripts/smoke-phase4.ps1` — reviews (purchase-gated, pending-vs-public, moderation, non-buyer rejected) + wishlist (add/list/check/remove) + content (admin CRUD → public visibility) + public settings (contains `social.whatsapp`)
 - [ ] `SslCommerzPaymentProvider` (paid) — env keys already reserved; see `docs/SETTLEMENTS.md` for the exact 4-step drop-in
 - [ ] `PathaoCourierProvider` / `SteadfastCourierProvider` / `RedxCourierProvider` (paid) — see `docs/SETTLEMENTS.md`
 - [ ] `RETURN_REQUESTED → RETURNED → REFUNDED` transitions (state-machine stub already there)
 
 ### Phase 4 — Reviews, Support, Content (Day 22-28)
 
-- [ ] Verified reviews with photos
-- [ ] Wishlist (schema exists)
-- [ ] WhatsApp support button (no backend work, just a `ContactField` setting + link)
-- [ ] Homepage content management (banners + Page rows already in schema; build CRUD)
+- [x] Verified reviews with photos (`images: string[]` accepted, displayed as thumbnails)
+- [x] Wishlist (heart on PDP + `/account/wishlist` page; backend uses `WishlistItem` table)
+- [x] WhatsApp support button (floating; reads `social.whatsapp` from the public settings endpoint)
+- [x] Homepage content management (admin CRUD for `Banner` + `Page` rows at `/dashboard/content`; storefront renders active banners on `/`)
 
 ### Phase 5 — Launch (Day 29-35)
 
@@ -266,8 +272,8 @@ See [DECISIONS.md](DECISIONS.md) for full architectural decisions.
 
 ## Next Action
 
-Phase 3.5 done. Coupons + settlement rails (PaymentProvider / CourierProvider
-contracts) are in place; COD is the only enabled payment method, end-to-end.
-When SSLCommerz / Pathao / Steadfast / RedX credentials land, follow
-`docs/SETTLEMENTS.md` for the exact 4-step drop-in. Next: Phase 4
-(reviews + content + support).
+Phase 4 done. Reviews (verified, moderated, public summary), wishlist, content
+CRUD (banners + pages), and the WhatsApp support button are all live. The
+storefront reads brand colors and social handles from a new public settings
+endpoint. Next: Phase 5 — launch (GA4 / GTM / Meta Pixel, SEO sitemap,
+production deploy).

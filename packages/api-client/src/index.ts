@@ -54,3 +54,27 @@ export type {
   CouponListResponse,
   DiscountType,
 } from './coupons';
+export { createReviewsClient } from './reviews';
+export type {
+  ReviewsClient,
+  ReviewListResponse,
+  AdminReview,
+  AdminReviewListResponse,
+  CreateReviewBody,
+  UpdateReviewBody,
+  ModerateReviewBody,
+} from './reviews';
+export { createWishlistClient } from './wishlist';
+export type { WishlistClient } from './wishlist';
+export { createContentClient } from './content';
+export type {
+  ContentClient,
+  BannerListResponse,
+  PageListResponse,
+  CreateBannerBody,
+  UpdateBannerBody,
+  CreatePageBody,
+  UpdatePageBody,
+} from './content';
+export { createPublicSettingsClient } from './public-settings';
+export type { PublicSettingsClient, PublicSettings } from './public-settings';

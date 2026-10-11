@@ -9,6 +9,8 @@ import type { Product } from '@anzara/shared-types';
 import { formatBDT, pickLocalized } from '@anzara/ui';
 import { cart } from '../../../lib/api';
 import { useAuthStore } from '../../../lib/auth-store';
+import { WishlistHeart } from '../../../components/wishlist-heart';
+import { ReviewsSection } from './reviews-section';
 
 export function ProductDetail({ product }: { product: Product }) {
   const router = useRouter();
@@ -85,7 +87,8 @@ export function ProductDetail({ product }: { product: Product }) {
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
         <div>
-          <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-100">
+          <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-gray-100">
+            <WishlistHeart productId={product.id} productSlug={product.slug} />
             {currentImage ? (
               <img
                 src={currentImage.url}
@@ -207,6 +210,8 @@ export function ProductDetail({ product }: { product: Product }) {
           ← Continue shopping
         </Link>
       </div>
+
+      <ReviewsSection productId={product.id} />
     </div>
   );
 }

@@ -94,9 +94,12 @@ export function AccountShell() {
         />
       )}
 
-      <div className="mt-8 flex justify-between border-t pt-6 text-sm">
+      <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-t pt-6 text-sm">
         <Link href="/orders" className="text-gray-600 hover:text-gray-900">
           View my orders →
+        </Link>
+        <Link href="/account/wishlist" className="text-gray-600 hover:text-gray-900">
+          My wishlist →
         </Link>
         <button
           type="button"

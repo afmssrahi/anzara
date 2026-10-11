@@ -1,16 +1,22 @@
 import Link from 'next/link';
-import { products } from '../lib/api';
-import type { Category, Product } from '@anzara/shared-types';
+import { products, content } from '../lib/api';
+import type { Banner, Category, Product } from '@anzara/shared-types';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   let featured: Product[] = [];
   let categories: Category[] = [];
+  let banners: Banner[] = [];
   try {
-    const [f, c] = await Promise.all([products.featured(), products.listCategories()]);
+    const [f, c, b] = await Promise.all([
+      products.featured(),
+      products.listCategories(),
+      content.activeBanners().catch(() => [] as Banner[]),
+    ]);
     featured = f.slice(0, 4);
     categories = c;
+    banners = b;
   } catch {
     // Backend might be down; render shell only.
   }
@@ -65,6 +71,39 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {banners.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 pb-12">
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {banners.map((b) => {
+              const inner = (
+                <div className="relative h-48 overflow-hidden rounded-lg bg-gray-100 md:h-56">
+                  <img
+                    src={b.mobileImageUrl || b.imageUrl}
+                    alt={b.title}
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent p-4 text-white">
+                    <p className="text-lg font-semibold">{b.title}</p>
+                    {b.subtitle ? <p className="text-sm opacity-90">{b.subtitle}</p> : null}
+                  </div>
+                </div>
+              );
+              return (
+                <li key={b.id}>
+                  {b.linkUrl ? (
+                    <Link href={b.linkUrl} className="block transition hover:opacity-95">
+                      {inner}
+                    </Link>
+                  ) : (
+                    inner
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {categories.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 pb-12">

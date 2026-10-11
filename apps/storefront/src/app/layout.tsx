@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { StorefrontProviders } from './providers';
+import { WhatsAppButton } from '../components/whatsapp-button';
 
 export const metadata: Metadata = {
   title: 'Anzara - Premium Modest Fashion',
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <StorefrontProviders>{children}</StorefrontProviders>
+        <WhatsAppButton />
       </body>
     </html>
   );
