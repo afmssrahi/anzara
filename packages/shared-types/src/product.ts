@@ -59,6 +59,8 @@ export interface Category {
   parentId?: string;
   position: number;
   isActive: boolean;
+  /** Subcategories. Populated for parent categories; absent for leaves. */
+  children?: Category[];
 }
 
 export interface Collection {

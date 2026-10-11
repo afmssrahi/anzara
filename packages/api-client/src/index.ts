@@ -13,3 +13,16 @@ export type {
   MessageData,
   OtpPurpose,
 } from './auth';
+export { createProductsClient } from './products';
+export type {
+  ProductsClient,
+  ProductsClientConfig,
+  ProductListParams,
+  CreateProductBody,
+  UpdateProductBody,
+  CreateCategoryBody,
+  UpdateCategoryBody,
+  CreateCollectionBody,
+  UpdateCollectionBody,
+  UploadedAsset,
+} from './products';

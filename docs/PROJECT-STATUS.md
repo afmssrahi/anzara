@@ -9,7 +9,7 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 
 ## Current Phase
 
-**Phase 1 — Authentication UI** (substantially complete; last polish items below)
+**Phase 2 — Products (with local asset upload)** ✅ Complete. Starting Phase 3 next.
 
 ## Verified working
 
@@ -74,6 +74,7 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 - [x] Auth module (customer + admin + OTP) with JWT
 - [x] Backend health check + register + admin login verified end-to-end
 - [x] Full monorepo build green (3 apps build, 8 packages pass lint/type-check/format)
+- [x] **Phase 2 catalog verified end-to-end**: public `/api/products` (list, filters, detail), `/api/categories`, `/api/collections`; admin `/api/admin/products` (list/create/delete), `/api/admin/categories`, asset upload via `AssetProvider`
 
 ### Phase 1 — Authentication (Day 4-7) — **IN PROGRESS**
 
@@ -120,15 +121,19 @@ Customer storefront + Admin dashboard + Express backend, all separate, all modul
 - [ ] Audit log viewer in admin (post-MVP)
 - [ ] UI copy / BN translation review
 
-### Phase 2 — Products (Day 8-14)
+### Phase 2 — Products (Day 8-14) — ✅ COMPLETE
 
-- [ ] Admin product CRUD with variants
-- [ ] Cloudinary integration
-- [ ] Customer: PLP with filters
-- [ ] Customer: PDP with size guide
-- [ ] Predictive search (Meilisearch)
-- [ ] Wishlist
-- [ ] SEO per product
+- [x] Admin product CRUD with variants
+- [x] Asset upload via swappable `AssetProvider` (local FS now, Cloudinary later)
+- [x] Customer: PLP with filters (category, price, size, color, inStock, search)
+- [x] Customer: PDP with image gallery, variant picker, quantity
+- [x] Categories (read-only public + admin CRUD)
+- [x] Collections (read-only public + admin CRUD)
+- [x] API client surfaces for products, categories, collections, uploads
+- [x] Seed: 10 real products with variants, tags, featured flags
+- [x] End-to-end curl verification (list, detail, create, delete)
+
+**Asset provider contract:** `apps/backend/src/modules/assets/provider.ts` defines `AssetProvider` (upload/remove). `local-provider.ts` writes to `UPLOAD_DIR` and returns public URL. Switch to Cloudinary = new provider file + factory change. Zero call-site changes.
 
 ### Phase 3 — Cart & Checkout (Day 15-21)
 

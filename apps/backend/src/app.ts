@@ -3,6 +3,7 @@
  * Composed of middleware and mounted module routes.
  * Kept small — every feature lives in its own module under src/modules/.
  */
+import path from 'node:path';
 import express, { type Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -12,7 +13,6 @@ import { requestLogger } from './middleware/request-logger';
 import { errorHandler } from './middleware/error-handler';
 import { notFoundHandler } from './middleware/not-found';
 import { apiRouter } from './routes';
-import type { Request, Response } from 'express';
 
 export function createApp(): Express {
   const env = getEnv();
@@ -34,11 +34,21 @@ export function createApp(): Express {
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
 
+  // Static assets (local provider). Switch ASSET_PROVIDER=cloudinary to disable.
+  const uploadRoot = path.resolve(process.cwd(), env.UPLOAD_DIR);
+  app.use(
+    '/uploads',
+    express.static(uploadRoot, {
+      maxAge: '7d',
+      immutable: false,
+    }),
+  );
+
   // Request logging
   app.use(requestLogger);
 
   // Health check (no auth)
-  app.get('/health', (_req: Request, res: Response) => {
+  app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 

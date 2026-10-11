@@ -41,6 +41,15 @@ const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
 
+  // Local uploads (dev) — folder on disk + public URL prefix
+  UPLOAD_DIR: z.string().default('./uploads'),
+  UPLOAD_MAX_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(8 * 1024 * 1024), // 8MB
+  ASSET_PROVIDER: z.enum(['local', 'cloudinary']).default('local'),
+
   // Payments (optional - COD works without these)
   SSLCOMMERZ_STORE_ID: z.string().optional(),
   SSLCOMMERZ_STORE_PASSWORD: z.string().optional(),

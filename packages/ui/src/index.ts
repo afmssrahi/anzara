@@ -16,3 +16,4 @@ export { I18nProvider, useT, useLocale, LOCALES } from './i18n/provider';
 export type { Locale, Dictionary } from './i18n/provider';
 export { LanguageSwitcher } from './i18n/language-switcher';
 export { cn } from './lib/cn';
+export { formatBDT, pickLocalized } from './format';
