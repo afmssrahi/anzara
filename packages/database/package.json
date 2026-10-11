@@ -11,7 +11,7 @@
     "migrate:reset": "dotenv -e ../../.env -- prisma migrate reset",
     "studio": "dotenv -e ../../.env -- prisma studio",
     "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
-    "lint": "eslint src prisma",
+    "lint": "eslint src prisma --config ../../eslint.config.mjs",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist .turbo"
   },
