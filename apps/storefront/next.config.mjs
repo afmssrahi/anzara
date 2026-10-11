@@ -3,7 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@anzara/ui', '@anzara/config', '@anzara/shared-types', '@anzara/validators'],
   experimental: {
-    typedRoutes: true,
+    // typedRoutes disabled until routes exist - re-enable in Phase 2
   },
   images: {
     remotePatterns: [
