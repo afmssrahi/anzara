@@ -9,6 +9,7 @@ import { requireAdmin, requirePermission } from '../../middleware/auth';
 import { assetUpload } from './middleware';
 import { getAssetProvider } from './factory';
 import { param } from '../../lib/http';
+import { uploadRateLimiter } from '../../middleware/rate-limit';
 
 export const assetsRouter: Router = Router();
 
@@ -16,6 +17,7 @@ assetsRouter.post(
   '/upload',
   requireAdmin,
   requirePermission('product:create'),
+  uploadRateLimiter,
   assetUpload.single('file'),
   asyncHandler(async (req, res) => {
     if (!req.file) {

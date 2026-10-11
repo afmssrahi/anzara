@@ -24,6 +24,13 @@ const envSchema = z.object({
   // Auth
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
+  JWT_RESET_SECRET: z
+    .string()
+    .min(32, 'JWT_RESET_SECRET must be at least 32 characters')
+    // Default to JWT_REFRESH_SECRET in dev if not set, so a fresh `.env` boots.
+    .default(process.env['JWT_REFRESH_SECRET'] ?? 'dev-only-reset-secret-change-me-32+chars'),
+  JWT_ISSUER: z.string().default('anzara'),
+  JWT_AUDIENCE: z.string().default('anzara-api'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
   COOKIE_DOMAIN: z.string().default('localhost'),
@@ -31,6 +38,15 @@ const envSchema = z.object({
     .string()
     .default('false')
     .transform((v) => v === 'true'),
+  // Number of reverse proxies in front of the app. Used so req.ip resolves
+  // to the real client IP. Set to 0 in dev (no proxy), or 1+ in prod.
+  TRUST_PROXY: z
+    .string()
+    .default('1')
+    .transform((v) => {
+      const n = Number(v);
+      return Number.isFinite(n) && n >= 0 ? n : 1;
+    }),
 
   // Email
   RESEND_API_KEY: z.string().optional(),

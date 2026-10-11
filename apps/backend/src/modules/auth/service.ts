@@ -4,7 +4,7 @@
  */
 import { createHash } from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import jwt, { type SignOptions } from 'jsonwebtoken';
+import jwt, { type SignOptions, type VerifyOptions } from 'jsonwebtoken';
 import { generateSecret, generateURI, verify as verifyOtp } from 'otplib';
 import QRCode from 'qrcode';
 import { getEnv } from '@anzara/config';
@@ -20,6 +20,17 @@ import type {
 } from '@anzara/validators';
 
 const BCRYPT_ROUNDS = 12;
+// Lock the JWT algorithm so an attacker can't downgrade via the `alg` header.
+const JWT_ALG = 'HS256' as const;
+
+function verifyOpts(): VerifyOptions {
+  const env = getEnv();
+  return {
+    algorithms: [JWT_ALG],
+    issuer: env.JWT_ISSUER,
+    audience: env.JWT_AUDIENCE,
+  };
+}
 const OTP_EXPIRY_MINUTES = 10;
 const OTP_LENGTH = 6;
 const OTP_RESEND_COOLDOWN_SECONDS = 60;
@@ -68,7 +79,10 @@ function hashToken(token: string): string {
 function signAccessToken(payload: JwtAccessPayload): string {
   const env = getEnv();
   return jwt.sign(payload, env.JWT_ACCESS_SECRET, {
+    algorithm: JWT_ALG,
     expiresIn: env.JWT_ACCESS_EXPIRES_IN,
+    issuer: env.JWT_ISSUER,
+    audience: env.JWT_AUDIENCE,
   } as SignOptions);
 }
 
@@ -78,13 +92,31 @@ function signRefreshToken(payload: { sub: string; type: 'customer' | 'admin' }):
 } {
   const env = getEnv();
   const token = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
+    algorithm: JWT_ALG,
     expiresIn: env.JWT_REFRESH_EXPIRES_IN,
+    issuer: env.JWT_ISSUER,
+    audience: env.JWT_AUDIENCE,
   } as SignOptions);
   // Decode to get expiry - simple parse since JWT format is known
   const decoded = jwt.decode(token) as { exp: number } | null;
   const expiresAt = decoded
     ? new Date(decoded.exp * 1000)
     : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  return { token, expiresAt };
+}
+
+function signResetToken(userId: string): { token: string; expiresAt: Date } {
+  const env = getEnv();
+  const token = jwt.sign({ sub: userId, purpose: 'reset' }, env.JWT_RESET_SECRET, {
+    algorithm: JWT_ALG,
+    expiresIn: `${RESET_TOKEN_EXPIRY_MINUTES}m`,
+    issuer: env.JWT_ISSUER,
+    audience: env.JWT_AUDIENCE,
+  } as SignOptions);
+  const decoded = jwt.decode(token) as { exp: number } | null;
+  const expiresAt = decoded
+    ? new Date(decoded.exp * 1000)
+    : new Date(Date.now() + RESET_TOKEN_EXPIRY_MINUTES * 60 * 1000);
   return { token, expiresAt };
 }
 
@@ -244,7 +276,7 @@ export const authService = {
     const env = getEnv();
     let payload: { sub: string; type: 'customer' | 'admin' };
     try {
-      payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as typeof payload;
+      payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET, verifyOpts()) as typeof payload;
     } catch {
       throw new UnauthorizedError('Invalid refresh token');
     }
@@ -350,9 +382,7 @@ export const authService = {
     const user = await authRepository.findUserByEmail(email);
     // Always return success to avoid email enumeration
     if (!user) return;
-    const token = jwt.sign({ sub: user.id, purpose: 'reset' }, getEnv().JWT_REFRESH_SECRET, {
-      expiresIn: `${RESET_TOKEN_EXPIRY_MINUTES}m`,
-    } as SignOptions);
+    const { token } = signResetToken(user.id);
     await emailService.send({
       to: email,
       subject: 'Reset your Anzara password',
@@ -368,7 +398,7 @@ export const authService = {
     const env = getEnv();
     let payload: { sub: string; purpose: string };
     try {
-      payload = jwt.verify(token, env.JWT_REFRESH_SECRET) as typeof payload;
+      payload = jwt.verify(token, env.JWT_RESET_SECRET, verifyOpts()) as typeof payload;
     } catch {
       throw new BadRequestError('Invalid or expired reset token');
     }
@@ -404,11 +434,26 @@ export const authService = {
   },
 
   // ==================== Update profile ====================
+  // Whitelist the only fields a user is allowed to change. Anything else
+  // in the request body (role, passwordHash, emailVerified, etc.) is
+  // dropped — defense against mass-assignment privilege escalation.
   async updateProfile(userId: string, input: UpdateProfileInput) {
     const { prisma } = await import('@anzara/database');
+    const safeData: {
+      firstName?: string;
+      lastName?: string;
+      phone?: string | null;
+      preferredLocale?: string;
+      acceptsMarketing?: boolean;
+    } = {};
+    if (input.firstName !== undefined) safeData.firstName = input.firstName;
+    if (input.lastName !== undefined) safeData.lastName = input.lastName;
+    if (input.phone !== undefined) safeData.phone = input.phone;
+    if (input.preferredLocale !== undefined) safeData.preferredLocale = input.preferredLocale;
+    if (input.acceptsMarketing !== undefined) safeData.acceptsMarketing = input.acceptsMarketing;
     const user = await prisma.user.update({
       where: { id: userId },
-      data: input,
+      data: safeData,
       select: {
         id: true,
         email: true,
@@ -427,9 +472,13 @@ export const authService = {
     input: { firstName?: string; lastName?: string; phone?: string | null },
   ) {
     const { prisma } = await import('@anzara/database');
+    const safeData: { firstName?: string; lastName?: string; phone?: string | null } = {};
+    if (input.firstName !== undefined) safeData.firstName = input.firstName;
+    if (input.lastName !== undefined) safeData.lastName = input.lastName;
+    if (input.phone !== undefined) safeData.phone = input.phone;
     const admin = await prisma.adminUser.update({
       where: { id: adminId },
-      data: input,
+      data: safeData,
       select: {
         id: true,
         email: true,

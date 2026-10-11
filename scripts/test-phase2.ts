@@ -65,25 +65,26 @@ interface DeleteResponse {
   success: boolean;
 }
 
-const ap = await api<ProductsListResponse>('/api/admin/products?limit=3', { token });
-console.log(
-  'admin.products',
-  ap.status,
-  'success=' + ap.json.success,
-  'total=' + ap.json.data.meta.total,
-  'pageCount=' + ap.json.data.data.length,
-);
+async function main(): Promise<void> {
+  const ap = await api<ProductsListResponse>('/api/admin/products?limit=3', { token });
+  console.log(
+    'admin.products',
+    ap.status,
+    'success=' + ap.json.success,
+    'total=' + ap.json.data.meta.total,
+    'pageCount=' + ap.json.data.data.length,
+  );
 
-const ac = await api<CategoriesListResponse>('/api/admin/categories', { token });
-console.log(
-  'admin.categories',
-  ac.status,
-  'success=' + ac.json.success,
-  'count=' + ac.json.data.length,
-);
+  const ac = await api<CategoriesListResponse>('/api/admin/categories', { token });
+  console.log(
+    'admin.categories',
+    ac.status,
+    'success=' + ac.json.success,
+    'count=' + ac.json.data.length,
+  );
 
-const catId = ac.json.data[0]?.id;
-if (catId) {
+  const catId = ac.json.data[0]?.id;
+  if (!catId) return;
   const create = await api<ProductResponse>('/api/admin/products', {
     method: 'POST',
     token,
@@ -114,3 +115,5 @@ if (catId) {
     console.log('delete.product', del.status, 'success=' + del.json.success);
   }
 }
+
+void main();

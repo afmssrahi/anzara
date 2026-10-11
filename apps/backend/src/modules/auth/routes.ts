@@ -7,7 +7,7 @@ import { authController } from './controller';
 import { asyncHandler } from '../../lib/async-handler';
 import { validate } from '../../middleware/validate';
 import { requireAuth, requireAdmin } from '../../middleware/auth';
-import { authRateLimiter, otpRateLimiter } from '../../middleware/rate-limit';
+import { authRateLimiter, loginRateLimiter, otpRateLimiter } from '../../middleware/rate-limit';
 import {
   customerRegisterSchema,
   customerLoginSchema,
@@ -33,14 +33,14 @@ authRouter.post(
 
 authRouter.post(
   '/login',
-  authRateLimiter,
+  loginRateLimiter,
   validate(customerLoginSchema),
   asyncHandler(authController.loginCustomer),
 );
 
 authRouter.post(
   '/admin/login',
-  authRateLimiter,
+  loginRateLimiter,
   validate(adminLoginSchema),
   asyncHandler(authController.loginAdmin),
 );
