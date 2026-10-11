@@ -29,6 +29,7 @@ import { errorHandler } from './middleware/error-handler';
 import { notFoundHandler } from './middleware/not-found';
 import { apiRouter } from './routes';
 import { seoRouter } from './modules/seo';
+import { mountSwagger } from './docs/swagger';
 
 export function createApp(): Express {
   const env = getEnv();
@@ -120,6 +121,13 @@ export function createApp(): Express {
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+
+  // 8.5. Swagger UI + raw OpenAPI spec. Dev + staging only — never expose
+  //      the schema in production. The spec + UI is for engineers and QA,
+  //      not for end users.
+  if (env.NODE_ENV !== 'production') {
+    mountSwagger(app);
+  }
 
   // 9. SEO endpoints (sitemap.xml, robots.txt) — served at the API root
   //    so search engines and crawlers can reach them directly.

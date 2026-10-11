@@ -1,6 +1,9 @@
 /**
  * Assets module - route definitions.
- * POST /api/assets/upload (admin only) — single image, returns the public URL.
+ *
+ * @openapi
+ * tags:
+ *   - name: Admin · Assets
  */
 import { Router } from 'express';
 import { asyncHandler } from '../../lib/async-handler';
@@ -13,6 +16,50 @@ import { uploadRateLimiter } from '../../middleware/rate-limit';
 
 export const assetsRouter: Router = Router();
 
+/**
+ * @openapi
+ * /api/assets/upload:
+ *   post:
+ *     tags: [Admin · Assets]
+ *     summary: Upload an image (admin)
+ *     description: |
+ *       `multipart/form-data` with a single `file` field. Optional `folder`
+ *       to group uploads (e.g. `products`, `banners`). Local default:
+ *       stored under `/uploads/`. Cloudinary when configured.
+ *     security:
+ *       - adminCookie: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file: { type: 'string', format: 'binary' }
+ *               folder: { type: 'string' }
+ *     responses:
+ *       201:
+ *         description: Created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: 'boolean', enum: [true] }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     url: { type: 'string' }
+ *                     publicId: { type: 'string' }
+ *       400:
+ *         description: Missing file or invalid
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ *       429: { $ref: '#/components/responses/RateLimited' }
+ */
 assetsRouter.post(
   '/upload',
   requireAdmin,
@@ -39,6 +86,36 @@ assetsRouter.post(
   }),
 );
 
+/**
+ * @openapi
+ * /api/assets/{publicId}:
+ *   delete:
+ *     tags: [Admin · Assets]
+ *     summary: Delete an asset (admin)
+ *     security:
+ *       - adminCookie: []
+ *     parameters:
+ *       - in: path
+ *         name: publicId
+ *         required: true
+ *         schema: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: OK
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: 'boolean', enum: [true] }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message: { type: 'string' }
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ */
 assetsRouter.delete(
   '/:publicId',
   requireAdmin,

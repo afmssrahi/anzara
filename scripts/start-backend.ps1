@@ -7,5 +7,5 @@ $proc = Start-Process -FilePath "C:\Program Files\nodejs\node.exe" `
   -WorkingDirectory "C:\Users\afmss\OneDrive\Desktop\E-Commerce" `
   -RedirectStandardOutput "$env:TEMP\anzara-backend.log" `
   -RedirectStandardError "$env:TEMP\anzara-backend.err.log" `
-  -NoNewWindow -PassThru:$false -WindowStyle Hidden
+  -WindowStyle Hidden -PassThru
 Write-Output ("started pid=" + $proc.Id)

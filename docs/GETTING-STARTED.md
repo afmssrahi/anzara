@@ -122,11 +122,12 @@ If you only want one of them, see the cheat sheet in the README.
 
 ## 8. Open the apps in your browser
 
-| App            | URL                          | Log in with                             |
-| -------------- | ---------------------------- | --------------------------------------- |
-| **Storefront** | http://localhost:3000        | (no login — just browse)                |
-| **Admin**      | http://localhost:3001        | `admin@anzara.com` / `AnzaraAdmin@2026` |
-| **Backend**    | http://localhost:4000/health | (no login — returns JSON)               |
+| App            | URL                            | Log in with                                 |
+| -------------- | ------------------------------ | ------------------------------------------- |
+| **Storefront** | http://localhost:3000          | (no login — just browse)                    |
+| **Admin**      | http://localhost:3001          | `admin@anzara.com` / `AnzaraAdmin@2026`     |
+| **Backend**    | http://localhost:4000/health   | (no login — returns JSON)                   |
+| **API docs**   | http://localhost:4000/api/docs | (Swagger UI — "Try it out" for every route) |
 
 For the customer side, you can sign up through the storefront's `/register`
 page, or log in as the seeded customer: `customer@anzara.com` / `Customer@2026`.

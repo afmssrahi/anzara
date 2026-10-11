@@ -316,6 +316,29 @@ Each script is a sequence of HTTP calls that exercise the happy path of
 that phase's features. They exit non-zero on first failure. Run them after
 every meaningful change.
 
+### Try it in the browser — Swagger UI
+
+For ad-hoc exploration of any endpoint, open the **live Swagger UI**:
+
+```
+http://localhost:4000/api/docs
+```
+
+- **70 operations** across 24 tags, all generated from `@openapi` JSDoc
+  comments above each route declaration.
+- Use the **Authorize** button (or just hit any login endpoint first) to
+  set the cookies; subsequent "Try it out" calls will send them
+  automatically.
+- The raw spec is at `http://localhost:4000/api/docs.json` (handy for
+  importing into Postman, Insomnia, or generating client SDKs).
+- `/api/docs` is **disabled in production** for security — it's a dev
+  tool, not a public API portal.
+
+If you add a new route, add a `@openapi` JSDoc block right above the
+declaration and the spec updates on the next restart. The base schema
+catalog lives in `apps/backend/src/docs/openapi.ts`; add new reusable
+schemas there so endpoints can `$ref` them.
+
 ---
 
 ## Useful things to know

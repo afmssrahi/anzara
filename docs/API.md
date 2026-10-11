@@ -4,10 +4,9 @@ The backend is a single REST API at `http://localhost:4000`. Every
 endpoint is namespaced under `/api/...` (plus a few non-API endpoints
 for SEO at the root: `/sitemap.xml`, `/robots.txt`, `/health`).
 
-If you're a frontend dev, you almost certainly want the typed client
-in [`packages/api-client/`](../packages/api-client) instead of calling
-the API directly. This reference is for backend work, debugging, and
-the occasional ad-hoc test.
+> **Live, interactive docs:** [http://localhost:4000/api/docs](http://localhost:4000/api/docs) — full Swagger UI with "Try it out" buttons. Raw spec: [/api/docs.json](http://localhost:4000/api/docs.json). The UI is dev-only (never exposed in production).
+>
+> **For frontend devs:** you almost certainly want the typed client in [`packages/api-client/`](../packages/api-client) instead of calling the API directly. This reference is for backend work, debugging, and the occasional ad-hoc test.
 
 ---
 
