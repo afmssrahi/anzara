@@ -3,14 +3,19 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ApiError } from '@anzara/api-client';
 import { Badge, Button, useT, useToast } from '@anzara/ui';
 import type { Product } from '@anzara/shared-types';
 import { formatBDT, pickLocalized } from '@anzara/ui';
+import { cart } from '../../../lib/api';
+import { useAuthStore } from '../../../lib/auth-store';
 
 export function ProductDetail({ product }: { product: Product }) {
   const router = useRouter();
   const { locale } = useT();
   const { success, error: showError } = useToast();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const [isAdding, setIsAdding] = useState(false);
 
   const initialVariant = product.variants[0];
   const [variantId, setVariantId] = useState<string | undefined>(initialVariant?.id);
@@ -34,7 +39,7 @@ export function ProductDetail({ product }: { product: Product }) {
     return map;
   }, [product]);
 
-  function handleAddToCart() {
+  async function handleAddToCart() {
     if (!variant) {
       showError('Please select a variant');
       return;
@@ -43,8 +48,21 @@ export function ProductDetail({ product }: { product: Product }) {
       showError('Not enough stock');
       return;
     }
-    // Cart wiring lands in Phase 3. For now, show a success message.
-    success(`Added ${quantity} × ${pickLocalized(product.name, locale)} to cart`);
+    if (!accessToken) {
+      // Not signed in - prompt to log in, then return here.
+      router.push(`/login?return=/products/${product.slug}`);
+      return;
+    }
+    setIsAdding(true);
+    try {
+      await cart.addItem({ variantId: variant.id, quantity }, accessToken);
+      success(`Added ${quantity} × ${pickLocalized(product.name, locale)} to cart`);
+    } catch (err) {
+      if (err instanceof ApiError) showError(err.message);
+      else showError('Could not add to cart');
+    } finally {
+      setIsAdding(false);
+    }
   }
 
   const name = pickLocalized(product.name, locale);
@@ -166,7 +184,7 @@ export function ProductDetail({ product }: { product: Product }) {
               onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
               className="h-10 w-20 rounded-md border border-gray-300 px-2 text-sm"
             />
-            <Button size="lg" disabled={!inStock} isLoading={false} onClick={handleAddToCart}>
+            <Button size="lg" disabled={!inStock} isLoading={isAdding} onClick={handleAddToCart}>
               {inStock ? 'Add to cart' : 'Out of stock'}
             </Button>
           </div>

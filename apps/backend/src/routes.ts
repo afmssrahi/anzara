@@ -9,6 +9,10 @@ import { productsRouter, adminProductsRouter } from './modules/products/routes';
 import { categoriesRouter, adminCategoriesRouter } from './modules/categories/routes';
 import { collectionsRouter, adminCollectionsRouter } from './modules/collections/routes';
 import { assetsRouter } from './modules/assets/routes';
+import { addressesRouter } from './modules/addresses/routes';
+import { cartRouter } from './modules/cart/routes';
+import { customerOrdersRouter, adminOrdersRouter } from './modules/orders/routes';
+import { adminSettingsRouter } from './modules/settings/routes';
 
 export const apiRouter: Router = Router();
 
@@ -20,6 +24,11 @@ apiRouter.use('/products', productsRouter);
 apiRouter.use('/categories', categoriesRouter);
 apiRouter.use('/collections', collectionsRouter);
 
+// Customer-scoped
+apiRouter.use('/addresses', addressesRouter);
+apiRouter.use('/cart', cartRouter);
+apiRouter.use('/orders', customerOrdersRouter);
+
 // Asset uploads (admin only, permission-gated)
 apiRouter.use('/assets', assetsRouter);
 
@@ -27,3 +36,5 @@ apiRouter.use('/assets', assetsRouter);
 apiRouter.use('/admin/products', adminProductsRouter);
 apiRouter.use('/admin/categories', adminCategoriesRouter);
 apiRouter.use('/admin/collections', adminCollectionsRouter);
+apiRouter.use('/admin/orders', adminOrdersRouter);
+apiRouter.use('/admin/settings', adminSettingsRouter);

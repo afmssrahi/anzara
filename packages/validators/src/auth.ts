@@ -85,3 +85,15 @@ export const addressSchema = z.object({
   isDefault: z.boolean().default(false),
 });
 export type AddressInput = z.infer<typeof addressSchema>;
+
+/** Create-address payload (accepts full input plus optional id). */
+export const createAddressSchema = addressSchema;
+export type CreateAddressInput = AddressInput;
+
+/** Update-address payload: same fields, all optional, but at least one must be set. */
+export const updateAddressSchema = addressSchema
+  .partial()
+  .refine((obj) => Object.values(obj).some((v) => v !== undefined), {
+    message: 'At least one field must be provided',
+  });
+export type UpdateAddressInput = z.infer<typeof updateAddressSchema>;

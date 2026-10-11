@@ -19,12 +19,12 @@ const NAV: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/dashboard/products', label: 'Products', permission: 'product:view' },
   { href: '/dashboard/categories', label: 'Categories', permission: 'product:view' },
-  { href: '/orders', label: 'Orders', permission: 'order:view' },
+  { href: '/dashboard/orders', label: 'Orders', permission: 'order:view' },
   { href: '/customers', label: 'Customers', permission: 'customer:view' },
   { href: '/inventory', label: 'Inventory', permission: 'inventory:view' },
   { href: '/coupons', label: 'Coupons', permission: 'coupon:view' },
   { href: '/cms', label: 'Content', permission: 'cms:manage' },
-  { href: '/settings', label: 'Settings', permission: 'settings:view' },
+  { href: '/dashboard/settings', label: 'Settings', permission: 'settings:view' },
   { href: '/admin-users', label: 'Admins', permission: 'admin:user:manage' },
 ];
 

@@ -24,3 +24,8 @@ export const applyCouponSchema = z.object({
   code: z.string().min(1).max(50).toUpperCase().trim(),
 });
 export type ApplyCouponInput = z.infer<typeof applyCouponSchema>;
+
+export const cartItemIdParamSchema = z.object({
+  itemId: z.string().min(1),
+});
+export type CartItemIdParam = z.infer<typeof cartItemIdParamSchema>;

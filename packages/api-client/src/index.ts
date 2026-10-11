@@ -26,3 +26,19 @@ export type {
   UpdateCollectionBody,
   UploadedAsset,
 } from './products';
+export { createAddressesClient } from './addresses';
+export type { AddressesClient, CreateAddressBody, UpdateAddressBody } from './addresses';
+export { createCartClient } from './cart';
+export type { CartClient, AddToCartBody, UpdateCartItemBody } from './cart';
+export { createOrdersClient } from './orders';
+export type {
+  OrdersClient,
+  CreateOrderBody,
+  OrderListParams,
+  AdminOrderListItem,
+  UpdateStatusBody,
+  UpdateShipmentBody,
+  OrderNoteBody,
+} from './orders';
+export { createSettingsClient } from './settings';
+export type { SettingsClient, SiteSetting, UpsertSettingBody } from './settings';
