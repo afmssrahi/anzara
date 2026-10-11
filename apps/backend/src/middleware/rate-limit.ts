@@ -6,6 +6,9 @@
  * - `otpRateLimiter`: 10 requests / hour per IP.
  * - `uploadRateLimiter`: 30 uploads / 5 min per IP.
  * - `writeRateLimiter`: 60 mutations / min per IP (for any future write APIs).
+ * - `docsRateLimiter`: 60 reads / min per IP for the Swagger UI + spec.
+ *   The UI re-fetches the spec on every page load, so it can't be too
+ *   tight, but it should still block a scraper.
  *
  * In-memory only. For multi-instance prod, swap to Redis.
  */
@@ -84,5 +87,20 @@ export const writeRateLimiter = rateLimit({
     success: false,
     error: { code: 'TOO_MANY_REQUESTS', message: 'Too many writes. Slow down.' },
   },
+  skip: skipInDev,
+});
+
+export const docsRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: 'TOO_MANY_REQUESTS', message: 'Too many requests for the docs UI. Slow down.' },
+  },
+  // The docs are dev-only; in dev we still apply the limit to make
+  // accidental infinite-refresh loops (and ad-hoc scrapers) stop quickly.
+  // DISABLE_RATE_LIMIT=true also disables it.
   skip: skipInDev,
 });

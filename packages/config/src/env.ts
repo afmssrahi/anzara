@@ -84,6 +84,12 @@ const envSchema = z.object({
   COURIER_PROVIDER: z.string().default('manual'),
   COURIER_API_KEY: z.string().optional(),
   COURIER_API_SECRET: z.string().optional(),
+
+  // Swagger UI (dev / test only). When BOTH user + password are set, the
+  // /api/docs endpoints require HTTP Basic auth. Leave blank for open
+  // access on local dev. The UI is NEVER mounted in production regardless.
+  SWAGGER_USER: z.string().optional(),
+  SWAGGER_PASSWORD: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

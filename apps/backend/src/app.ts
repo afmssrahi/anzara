@@ -122,11 +122,13 @@ export function createApp(): Express {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // 8.5. Swagger UI + raw OpenAPI spec. Dev + staging only — never expose
+  // 8.5. Swagger UI + raw OpenAPI spec. Dev + test only — never expose
   //      the schema in production. The spec + UI is for engineers and QA,
-  //      not for end users.
-  if (env.NODE_ENV !== 'production') {
-    mountSwagger(app);
+  //      not for end users. When SWAGGER_USER + SWAGGER_PASSWORD are set,
+  //      both endpoints also require HTTP Basic auth (defense in depth
+  //      against accidental public exposure on a staging-like host).
+  if (env.NODE_ENV === 'development' || env.NODE_ENV === 'test') {
+    mountSwagger(app, { user: env.SWAGGER_USER, password: env.SWAGGER_PASSWORD });
   }
 
   // 9. SEO endpoints (sitemap.xml, robots.txt) — served at the API root
