@@ -25,7 +25,10 @@ next-env.d.ts
 .env.staging
 
 # IDE
-.vscode/
+# Ignore user/IDE-specific folders inside .vscode, but keep the shared settings.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo

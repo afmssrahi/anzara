@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "Prisma.prisma",
+    "bradlc.vscode-tailwindcss",
+    "ms-typescript.typescript",
+    "EditorConfig.EditorConfig",
+    "mhutchie.git-graph"
+  ]
+}

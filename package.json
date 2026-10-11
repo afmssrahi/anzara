@@ -20,14 +20,29 @@
     "db:generate": "pnpm --filter @anzara/database run generate",
     "db:migrate": "pnpm --filter @anzara/database run migrate",
     "db:studio": "pnpm --filter @anzara/database run studio",
-    "db:seed": "pnpm --filter @anzara/database run seed"
+    "db:seed": "pnpm --filter @anzara/database run seed",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "prettier --write",
+      "eslint --fix --max-warnings=999"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.71.1",
+    "@typescript-eslint/parser": "^8.71.1",
     "dotenv-cli": "^11.0.0",
     "eslint": "^9.17.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
     "prettier": "^3.4.2",
     "turbo": "^2.3.3",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.71.1"
   }
 }

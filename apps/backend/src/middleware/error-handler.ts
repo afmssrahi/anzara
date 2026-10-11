@@ -5,13 +5,12 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { AppError, InternalError } from '../lib/errors';
-import { logger } from '../lib/logger';
 
 export function errorHandler(
   err: Error,
   req: Request,
   res: Response,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   _next: NextFunction,
 ): void {
   // Zod validation errors -> 422 with field details

@@ -1,7 +1,9 @@
 import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
 
 export default [
   js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
     ignores: [
       '**/node_modules/**',
@@ -54,11 +56,20 @@ export default [
       'no-console': 'off',
       'no-debugger': 'warn',
       'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
       'prefer-const': 'error',
       'no-var': 'error',
       eqeqeq: ['error', 'always'],
       'no-throw-literal': 'error',
       'no-return-await': 'off',
+      '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
 ];
